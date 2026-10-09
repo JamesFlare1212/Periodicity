@@ -62,7 +62,7 @@ Svelte 5 runes drive the interface. SvelteKit 3 uses package subpath imports (`#
 
 This rewrite preserves the original project's 118-element dataset and its curated property corrections. The original general records came from [Periodic-Table-JSON](https://github.com/Bowserinator/Periodic-Table-JSON); numeric properties came from `periodic-table@0.0.8`. Both are vendored as reference data. See [provenance and units](src/lib/data/PROVENANCE.md) and the [upstream data license](src/lib/data/periodic-table-LICENSE.txt).
 
-Values are historical reference measurements, with some representative isotope mass numbers for unstable elements. Unknown properties remain unavailable. The displayed atomic radius is the source's covalent radius; electron affinity follows its electron-attachment enthalpy sign convention. The shell model shows electron counts, with illustrative positions.
+Values are historical reference measurements, with some representative isotope mass numbers for unstable elements. Unknown properties remain unavailable. The displayed atomic radius is the source's covalent radius; electron affinity uses the energy-released convention, converted from the legacy electron-attachment enthalpy signs. The shell model shows electron counts, with illustrative positions.
 
 ## License
 

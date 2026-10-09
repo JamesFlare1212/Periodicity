@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test';
+import records from './element-records.json';
 import {
 	categories,
 	elements,
@@ -72,6 +73,20 @@ describe('preserved reference data', () => {
 		expect(element('Og').electronegativity).toBeNull();
 		expect(element('Og').phase).toBe('unknown');
 	});
+
+	test('converts attachment enthalpy into released-energy affinity without changing source records', () => {
+		expect(
+			records.find((record) => record.properties.symbol === 'H')?.properties.electronAffinity
+		).toBe(-73);
+		expect(
+			records.find((record) => record.properties.symbol === 'Cl')?.properties.electronAffinity
+		).toBe(-349);
+		expect(element('H').electronAffinity).toBe(73);
+		expect(element('Ca').electronAffinity).toBe(2);
+		expect(element('Cl').electronAffinity).toBe(349);
+		expect(element('Fr').electronAffinity).toBeNull();
+		expect(element('Og').electronAffinity).toBeNull();
+	});
 });
 
 describe('element lookup and search', () => {
@@ -143,6 +158,7 @@ describe('trend data', () => {
 
 	test('normalizes each heatmap to its data range with missing data left missing', () => {
 		expect(getTrendRange('electronegativity')).toEqual({ min: 0.7, max: 3.98 });
+		expect(getTrendRange('electronAffinity')).toEqual({ min: 0, max: 349 });
 		expect(normalizeTrendValue(element('F'), 'electronegativity')).toBe(1);
 		expect(normalizeTrendValue(element('Fr'), 'electronegativity')).toBe(0);
 		expect(normalizeTrendValue(element('Cl'), 'electronAffinity')).toBe(1);

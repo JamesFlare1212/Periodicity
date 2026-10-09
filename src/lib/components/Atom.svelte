@@ -4,9 +4,11 @@
 	interface Props {
 		element: Element;
 		compact?: boolean;
+		color?: string;
+		background?: string;
 	}
 
-	let { element, compact = false }: Props = $props();
+	let { element, compact = false, color, background }: Props = $props();
 	const shellNames = ['K', 'L', 'M', 'N', 'O', 'P', 'Q'];
 	let shells = $derived(element.shells.filter((count) => count > 0));
 
@@ -23,7 +25,7 @@
 <figure
 	class="atom"
 	class:compact
-	style={`--element-color: var(--category-${element.category}); --element-bg: var(--category-${element.category}-bg)`}
+	style={`--element-color: ${color ?? `var(--category-${element.category})`}; --element-bg: ${background ?? `var(--category-${element.category}-bg)`}`}
 >
 	<svg
 		viewBox="0 0 360 360"

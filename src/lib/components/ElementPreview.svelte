@@ -1,10 +1,17 @@
 <script lang="ts">
 	import { categoryById, getPhaseAtTemperature, type Element } from '#lib/data/elements.js';
+	import { getElementDisplay, type ElementDisplay } from '#lib/element-display.js';
 	import Atom from '#lib/components/Atom.svelte';
+	import ElectronConfiguration from '#lib/components/ElectronConfiguration.svelte';
 	import Icon from '#lib/components/Icon.svelte';
-	let { element, temperature = 298.15 }: { element: Element; temperature?: number } = $props();
+	let {
+		element,
+		display = 'families',
+		temperature = 298.15
+	}: { element: Element; display?: ElementDisplay; temperature?: number } = $props();
 	let category = $derived(categoryById[element.category]);
 	let phase = $derived(getPhaseAtTemperature(element, temperature));
+	let presentation = $derived(getElementDisplay(element, display, temperature));
 	let description = $derived(
 		element.summary
 			.split(/(?<=\.)\s+/)
@@ -15,9 +22,9 @@
 
 <div
 	class="preview"
-	style={`--element-color:${category.color};--element-background:${category.background}`}
+	style={`--element-color:${presentation.color};--element-background:${presentation.background};--family-color:${category.color}`}
 >
-	<div class="specimen">
+	<div class="specimen" class:unknown={presentation.unknown}>
 		<span class="specimen-number">{element.number}</span><span class="specimen-symbol"
 			>{element.symbol}</span
 		><span class="specimen-mass">{element.atomicMass}</span>
@@ -29,15 +36,30 @@
 		</div>
 		<p class="description">{description}</p>
 		<div class="preview-properties">
-			<span><b>{element.electronConfiguration}</b>Electron configuration</span><span
-				><b class="phase">{phase}</b>State at {Math.round(temperature)} K</span
+			{#if display !== 'families'}
+				<span class="active-property">
+					<b class:phase={display === 'phase'}
+						>{presentation.value}{#if presentation.unit}
+							{' '}<span class="property-unit">{presentation.unit}</span>{/if}</b
+					>
+					{presentation.label}
+				</span>
+			{/if}
+			<span
+				><b><ElectronConfiguration configuration={element.electronConfiguration} /></b>Electron
+				configuration</span
 			>
+			{#if display !== 'phase'}
+				<span><b class="phase">{phase}</b>State at {Math.round(temperature)} K</span>
+			{/if}
 		</div>
 		<a class="details-link" href={`/element/${element.number}/`}
 			>Explore {element.name.toLowerCase()}<Icon name="arrow-right" size={16} /></a
 		>
 	</div>
-	<div class="preview-atom"><Atom {element} compact /></div>
+	<div class="preview-atom">
+		<Atom {element} compact color={presentation.color} background={presentation.background} />
+	</div>
 </div>
 
 <style>
@@ -60,6 +82,9 @@
 		border-radius: 8px;
 		background: var(--element-background);
 		padding: 9px 11px;
+	}
+	.specimen.unknown {
+		opacity: 0.5;
 	}
 	.specimen-number {
 		font-size: 13px;
@@ -89,7 +114,7 @@
 		letter-spacing: -0.04em;
 	}
 	.family {
-		color: var(--element-color);
+		color: var(--family-color);
 		font-size: 11px;
 		display: flex;
 		align-items: center;
@@ -114,12 +139,13 @@
 	}
 	.preview-properties {
 		display: flex;
-		gap: 24px;
+		flex-wrap: wrap;
+		gap: 10px 24px;
 		margin: 12px 0;
 		font-size: 10px;
 		color: var(--muted);
 	}
-	.preview-properties span {
+	.preview-properties > span {
 		display: flex;
 		flex-direction: column;
 		gap: 3px;
@@ -127,6 +153,14 @@
 	.preview-properties b {
 		color: var(--text);
 		font-size: 12px;
+		font-weight: 400;
+	}
+	.preview-properties .active-property b {
+		font-weight: 600;
+		font-variant-numeric: tabular-nums;
+	}
+	.property-unit {
+		font-size: 10px;
 		font-weight: 400;
 	}
 	.phase {
@@ -151,6 +185,7 @@
 		.preview {
 			grid-template-columns: 85px minmax(0, 1fr);
 			gap: 18px;
+			padding-block: 8px;
 		}
 		.preview-atom {
 			display: none;
@@ -166,7 +201,7 @@
 			font-size: 24px;
 		}
 		.preview-properties {
-			gap: 18px;
+			gap: 10px 18px;
 		}
 	}
 	@media (max-width: 760px) {
@@ -181,9 +216,9 @@
 			font-size: 12px;
 		}
 		.preview-properties {
-			gap: 12px;
+			gap: 10px 12px;
 		}
-		.preview-properties span {
+		.preview-properties > span {
 			font-size: 10px;
 		}
 		.preview-properties b {

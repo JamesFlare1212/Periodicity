@@ -5,11 +5,17 @@
 - `general` is the original `src/assets/elementGeneral.json`, derived from [Bowserinator/Periodic-Table-JSON](https://github.com/Bowserinator/Periodic-Table-JSON). It provides the summaries, sources, table positions, shells, appearance, discoverers, and molar heat.
 - `properties` is the exact [periodic-table 0.0.8](https://www.npmjs.com/package/periodic-table/v/0.0.8) dataset formerly imported by `src/elements.js`. Its license is preserved in `periodic-table-LICENSE.txt`. It provides atomic mass, electron configuration, numerical chemical properties, discovery dates, bonding type, and recorded standard state.
 
-`elements.ts` applies the former `src/elements.js` measurement corrections and rounds stable atomic weights to three decimal places, as before. Representative isotope mass numbers remain integers. The source’s density values are already in **g/cm³**, including gases; the other dataset uses different units for gases and is deliberately not used for this property. Unknown measurements are `null`, while measured zero electron affinities are preserved.
+`elements.ts` applies the former `src/elements.js` measurement corrections and rounds stable atomic weights to three decimal places, as before. Representative isotope mass numbers remain integers. The source’s density values are already in **g/cm³**, including gases; the other dataset uses different units for gases and is deliberately not used for this property. Unknown measurements are `null`, while source and legacy-curated zero electron affinities are preserved.
 
 Family membership follows the explicit lists in the original UI, including polonium as a metalloid, astatine and tennessine as halogens, and all 15 members of each detached f-block row. These are display conventions, especially for predicted heavy-element families, rather than a claim that every category is universally agreed.
 
 The source’s 19 unrecorded heavy-element standard states remain `unknown`. The second dataset’s predicted solid/gas states are retained in the raw data but are not presented as established measurements.
+
+## Electron affinity
+
+The raw numerical dataset uses the electron-attachment enthalpy sign convention: for example, chlorine is recorded as −349 kJ/mol. The application converts those signs to electron affinity as energy released on electron attachment, following the [IUPAC definition](https://goldbook.iupac.org/terms/view/E01977/1000). It negates nonzero source values, so chlorine is displayed as 349 kJ/mol and hydrogen as 73 kJ/mol. Raw records and numerical magnitudes are preserved.
+
+The converted dataset spans 0–349 kJ/mol. Zero remains zero, and unknown values remain `null`. Radon retains the original app’s curated zero even though its raw record is blank; this is a legacy correction, not a recorded measurement. The heatmap uses a single increasing color scale, with an untinted surface for zero and reduced visibility for unknown values.
 
 ## Temperature estimates
 

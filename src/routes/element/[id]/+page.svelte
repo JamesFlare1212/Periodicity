@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Atom from '#lib/components/Atom.svelte';
+	import ElectronConfiguration from '#lib/components/ElectronConfiguration.svelte';
 	import Icon from '#lib/components/Icon.svelte';
 	import TrendChart from '#lib/components/TrendChart.svelte';
 	import { categories, getElement, trendDefinitions, type TrendId } from '#lib/data/elements.js';
@@ -12,7 +13,6 @@
 	let next = $derived(getElement(element.number + 1));
 	let selectedTrend = $state<TrendId>('ionizationEnergy');
 	let availableTrends = $derived(trendDefinitions.filter((item) => item.id !== 'atomicMass'));
-	let configurationParts = $derived(element.electronConfiguration.split(/(\d[spdf]\d+)/g));
 
 	function number(value: number | null | undefined, unit = '') {
 		if (value === null || value === undefined || !Number.isFinite(value)) return 'Not available';
@@ -125,13 +125,7 @@
 			<p class="panel-description">Electron arrangement and the energy behind its behavior.</p>
 			<div class="configuration">
 				<span>Electron configuration</span>
-				<strong
-					>{#each configurationParts as part}{@const orbital =
-							part.match(/^(\d[spdf])(\d+)$/)}{#if orbital}<span class="orbital"
-								>{orbital[1]}<sup>{orbital[2]}</sup></span
-							>{:else}{part ||
-								(element.electronConfiguration ? '' : 'Not available')}{/if}{/each}</strong
-				>
+				<strong><ElectronConfiguration configuration={element.electronConfiguration} /></strong>
 			</div>
 			<dl class="electronic-properties">
 				<div>
@@ -461,12 +455,6 @@
 		line-height: 1.6;
 		font-weight: 500;
 		overflow-wrap: anywhere;
-	}
-	.orbital {
-		white-space: nowrap;
-	}
-	.orbital sup {
-		font-size: 0.65em;
 	}
 	.electronic-properties {
 		display: grid;

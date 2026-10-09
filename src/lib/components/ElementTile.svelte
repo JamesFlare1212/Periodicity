@@ -1,12 +1,6 @@
 <script lang="ts">
-	import {
-		formatTrendValue,
-		getPhaseAtTemperature,
-		normalizeTrendValue,
-		trendDefinitions,
-		type Element,
-		type TrendId
-	} from '#lib/data/elements.js';
+	import { type Element } from '#lib/data/elements.js';
+	import { getElementDisplay, type ElementDisplay } from '#lib/element-display.js';
 	let {
 		element,
 		selected = false,
@@ -20,38 +14,18 @@
 		element: Element;
 		selected?: boolean;
 		dimmed?: boolean;
-		display?: 'families' | 'phase' | TrendId;
+		display?: ElementDisplay;
 		temperature?: number;
 		onselect: (element: Element) => void;
 		onpreview: (element: Element) => void;
 		onleave: () => void;
 	} = $props();
-	let phase = $derived(getPhaseAtTemperature(element, temperature));
-	let color = $derived(
-		display === 'phase' ? `var(--phase-${phase})` : `var(--category-${element.category})`
-	);
-	let bottom = $derived(
-		display === 'families'
-			? String(element.atomicMass)
-			: display === 'phase'
-				? phase
-				: formatTrendValue(element, display)
-	);
-	let isTrend = $derived(display !== 'families' && display !== 'phase');
-	let definition = $derived(trendDefinitions.find((item) => item.id === display));
+	let presentation = $derived(getElementDisplay(element, display, temperature));
+	let bottom = $derived(display === 'families' ? String(element.atomicMass) : presentation.value);
 	let metric = $derived(
 		display === 'families'
 			? `Atomic mass ${element.atomicMass}`
-			: display === 'phase'
-				? `${phase} at ${temperature} kelvin`
-				: `${definition?.label}: ${bottom} ${definition?.unit ?? ''}`
-	);
-	let heat = $derived(isTrend ? normalizeTrendValue(element, display as TrendId) : null);
-	let tileColor = $derived(isTrend ? 'var(--text)' : color);
-	let tileBg = $derived(
-		isTrend
-			? `color-mix(in srgb,var(--accent) ${(heat ?? 0) * 30}%,var(--surface))`
-			: `var(--category-${element.category}-bg)`
+			: `${presentation.label}: ${bottom}${presentation.unit ? ` ${presentation.unit}` : ''}`
 	);
 </script>
 
@@ -59,13 +33,18 @@
 	class="element-tile"
 	class:selected
 	class:dimmed
-	style={`--tile-color:${tileColor};--tile-bg:${tileBg}`}
-	aria-label={`${element.number}. ${element.name}, ${element.symbol}. ${metric}. Select element`}
+	class:unknown={presentation.unknown}
+	style={`--tile-color:${presentation.color};--tile-bg:${presentation.background}`}
+	aria-label={`${element.number}. ${element.name}, ${element.symbol}. ${metric}. ${selected ? 'View element details' : 'Lock element preview'}`}
 	aria-pressed={selected}
 	onclick={() => onselect(element)}
-	onmouseenter={() => onpreview(element)}
+	onpointerenter={(event) => {
+		if (event.pointerType === 'mouse') onpreview(element);
+	}}
 	onmouseleave={onleave}
-	onfocus={() => onpreview(element)}
+	onfocus={(event) => {
+		if (event.currentTarget.matches(':focus-visible')) onpreview(element);
+	}}
 	onblur={onleave}
 	data-element={element.number}
 >
@@ -103,11 +82,16 @@
 		border-color: var(--tile-color);
 		box-shadow: inset 0 0 0 1px var(--tile-color);
 	}
+	.element-tile.unknown {
+		opacity: 0.4;
+	}
 	.element-tile.dimmed {
 		opacity: 0.18;
 	}
 	.element-tile.dimmed:focus-visible,
-	.element-tile.dimmed:hover {
+	.element-tile.dimmed:hover,
+	.element-tile.unknown:focus-visible,
+	.element-tile.unknown:hover {
 		opacity: 1;
 	}
 	.number {

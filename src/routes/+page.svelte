@@ -23,11 +23,11 @@
 	let display = $state<'families' | 'phase' | TrendId>('families');
 	let temperature = $state(298);
 	let temperatureOpen = $state(false);
-	let selected = $state<Element>(getElement(6)!);
+	let selected = $state<Element | null>(null);
 	let hovered = $state<Element | null>(null);
 	let mobileView = $state<'grid' | 'table'>('grid');
 	let effectiveUrl = $derived(page.shallow?.url ?? page.url);
-	let preview = $derived(hovered ?? selected);
+	let preview = $derived(selected ?? hovered ?? getElement(6)!);
 	let searchMatches = $derived(new Set(searchElements(query).map((element) => element.number)));
 	let matches = $derived(
 		elements.filter(
@@ -61,7 +61,7 @@
 		const t = Number(params.get('temperature') ?? 298);
 		temperature = Number.isFinite(t) ? Math.min(6000, Math.max(0, t)) : 298;
 		temperatureOpen = display === 'phase';
-		selected = getElement(params.get('element') ?? '6') ?? getElement(6)!;
+		selected = getElement(params.get('element') ?? '') ?? null;
 	});
 	function update(params: Record<string, string | null>) {
 		const url = new URL(effectiveUrl.href);
@@ -70,7 +70,7 @@
 		void goto(url, { shallow: true, replace: true, reset: false });
 	}
 	function selectElement(element: Element) {
-		if (window.matchMedia('(max-width: 1000px)').matches) {
+		if (selected?.number === element.number) {
 			void goto(`/element/${element.number}/`);
 			return;
 		}
@@ -233,20 +233,26 @@
 				>{/each}</select
 		>
 	</div>
-	<div class="mobile-preview panel"><ElementPreview element={preview} {temperature} /></div>
+	<div class="mobile-preview panel">
+		<ElementPreview element={preview} {display} {temperature} />
+	</div>
 	<div class="table-caption">
 		<span
 			>{#if query || category}<b>{matches.length}</b> of 118 elements{#if category}
 					in {categories.find((item) => item.id === category)?.label.toLowerCase()}{/if}{:else}<span
-					class="desktop-selection-hint">Select an element to take a closer look</span
-				><span class="mobile-selection-hint">Tap an element to explore it</span>{/if}</span
-		><span class="table-caption-right"
+					class="desktop-selection-hint">Click to lock a preview; click again for details</span
+				><span class="mobile-selection-hint">Tap to lock a preview; tap again for details</span
+				>{/if}</span
+		><span class="table-caption-right" class:affinity={display === 'electronAffinity'}
 			>{#if isTrend && trend}{trend.label}
-				<span class="heatmap-key"
-					><i></i>{display === 'electronAffinity'
-						? 'Less to more energy released'
-						: 'Low to high'}</span
-				>{:else}<span class="key-hint"
+				<span
+					class="heatmap-key"
+					style={`--heatmap-color:${display === 'electronAffinity' ? trend.color : 'var(--accent)'}`}
+				>
+					{#if display === 'electronAffinity'}0{/if}<i aria-hidden="true"></i>
+					{display === 'electronAffinity' ? 'More energy released' : 'Low to high'}
+				</span>
+			{:else}<span class="key-hint"
 					><kbd>↑</kbd><kbd>↓</kbd><kbd>←</kbd><kbd>→</kbd> to explore</span
 				>{/if}</span
 		>
@@ -275,7 +281,7 @@
 					class="period-label"
 					style={`grid-row:${period + 1}`}>{period}</span
 				>{/each}
-			<div class="table-preview"><ElementPreview element={preview} {temperature} /></div>
+			<div class="table-preview"><ElementPreview element={preview} {display} {temperature} /></div>
 			{#each elements as element}<div
 					class="tile-position"
 					style={`grid-column:${element.xpos + 1};grid-row:${element.ypos + 1};--heat:${isTrend ? (normalizeTrendValue(element, display as TrendId) ?? 0) : 0}`}
@@ -285,7 +291,7 @@
 				>
 					<ElementTile
 						{element}
-						selected={selected.number === element.number}
+						selected={selected?.number === element.number}
 						dimmed={!matchedNumbers.has(element.number)}
 						{display}
 						{temperature}
@@ -321,7 +327,7 @@
 	<div class="mobile-element-grid" class:hidden={mobileView === 'table'}>
 		{#each matches as element}<ElementTile
 				{element}
-				selected={selected.number === element.number}
+				selected={selected?.number === element.number}
 				{display}
 				{temperature}
 				onselect={selectElement}
@@ -569,6 +575,7 @@
 	}
 	.table-caption {
 		display: flex;
+		flex-wrap: wrap;
 		justify-content: space-between;
 		gap: 16px;
 		margin: 20px 0 8px;
@@ -607,7 +614,7 @@
 		display: block;
 		width: 48px;
 		height: 5px;
-		background: linear-gradient(90deg, var(--surface), var(--accent));
+		background: linear-gradient(90deg, var(--surface), var(--heatmap-color, var(--accent)));
 		border-radius: 2px;
 	}
 	.periodic-grid {
@@ -812,6 +819,11 @@
 		text-align: center;
 	}
 	@media (max-width: 1000px) {
+		.table-caption-right.affinity {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 8px;
+		}
 		.heading-note {
 			display: none;
 		}

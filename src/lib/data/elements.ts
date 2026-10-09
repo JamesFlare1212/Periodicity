@@ -44,7 +44,7 @@ export interface Element {
 	ionizationEnergy: number | null;
 	/** Source atomic (covalent) radius, pm. */
 	atomicRadius: number | null;
-	/** Electron attachment enthalpy convention used by the original app, kJ/mol. */
+	/** Electron affinity as energy released on electron attachment, kJ/mol. */
 	electronAffinity: number | null;
 	vanDerWaalsRadius: number | null;
 	discoveredBy: string | null;
@@ -143,6 +143,12 @@ export const elements: Element[] = records.map(({ general, properties }) => {
 	const atomicMass = Array.isArray(properties.atomicMass)
 		? properties.atomicMass[0]
 		: Number(Number.parseFloat(properties.atomicMass).toFixed(3));
+	const electronAttachmentEnthalpy = numberOrNull(properties.electronAffinity);
+	const electronAffinity = electronAffinityZero.has(number)
+		? 0
+		: electronAttachmentEnthalpy === null || electronAttachmentEnthalpy === 0
+			? electronAttachmentEnthalpy
+			: -electronAttachmentEnthalpy;
 
 	return {
 		number,
@@ -167,9 +173,7 @@ export const elements: Element[] = records.map(({ general, properties }) => {
 			electronegativityCorrections[number] ?? numberOrNull(properties.electronegativity),
 		ionizationEnergy: numberOrNull(properties.ionizationEnergy),
 		atomicRadius: numberOrNull(properties.atomicRadius),
-		electronAffinity: electronAffinityZero.has(number)
-			? 0
-			: numberOrNull(properties.electronAffinity),
+		electronAffinity,
 		vanDerWaalsRadius: numberOrNull(properties.vanDelWaalsRadius),
 		discoveredBy: general.discovered_by,
 		yearDiscovered: textOrNull(properties.yearDiscovered),
@@ -292,7 +296,7 @@ export const trendDefinitions: TrendDefinition[] = [
 		label: 'Electron affinity',
 		unit: 'kJ/mol',
 		description:
-			'Energy change when a gaseous atom gains an electron. Negative values indicate released energy.',
+			'Energy released when a gaseous atom gains an electron. Higher values mean more energy released.',
 		color: 'var(--trend-electron-affinity)'
 	},
 	{
@@ -347,8 +351,7 @@ export function normalizeTrendValue(element: Element, trend: TrendId): number | 
 	if (value === null) return null;
 	const { min, max } = getTrendRange(trend);
 	if (max === min) return 0.5;
-	const ratio =
-		trend === 'electronAffinity' ? (max - value) / (max - min) : (value - min) / (max - min);
+	const ratio = (value - min) / (max - min);
 	return Math.max(0, Math.min(1, ratio));
 }
 
