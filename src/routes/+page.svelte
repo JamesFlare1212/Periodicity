@@ -601,6 +601,7 @@
 	}
 	.table-caption-right {
 		display: flex;
+		align-items: center;
 		gap: 12px;
 	}
 	.key-hint {
