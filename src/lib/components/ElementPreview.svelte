@@ -217,6 +217,8 @@
 		}
 		.preview-properties {
 			gap: 10px 12px;
+			/* Reserve two rows when the active property joins the other facts. */
+			min-height: 79px;
 		}
 		.preview-properties > span {
 			font-size: 10px;
@@ -230,6 +232,12 @@
 		.specimen {
 			align-self: start;
 			margin-top: 3px;
+		}
+	}
+	@media (max-width: 360px) {
+		.preview-properties {
+			/* Narrow screens can wrap all three facts onto separate rows. */
+			min-height: 123.5px;
 		}
 	}
 </style>

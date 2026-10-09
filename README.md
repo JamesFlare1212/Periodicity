@@ -28,8 +28,8 @@ bun run format:check
 
 ## Explore
 
-- **Periodic table:** Search names, symbols, atomic numbers, or families; highlight a family; inspect an element; switch between family colors, physical states, and property heatmaps.
-- **Temperature:** Explore estimated states from 0–6,000 K. This is an educational approximation at ordinary pressure. Missing measurements remain unknown, and transitions that do not define a liquid interval are handled separately.
+- **Periodic table:** Highlight a family; inspect an element; switch between family colors, physical states, and property heatmaps.
+- **Temperature:** Select “Physical state” in the left-hand “Color by” menu to show temperature controls and state counts on the right. The borderless controls are hidden in other coloring modes while retaining their layout space, so switching modes does not move the table. Explore estimated states from 0–6,000 K; adjusting the temperature activates physical-state coloring. This is an educational approximation at ordinary pressure. Missing measurements remain unknown, and transitions that do not define a liquid interval are handled separately.
 - **Trends:** Switch between ionization energy, electronegativity, atomic radius, electron affinity, density, and melting point. Inspect exact values on an interactive chart or a sortable, searchable, paginated table. Missing data are represented by gaps, rather than zeroes.
 - **Element pages:** Read the original summaries, electron configurations, discovery information, and physical properties; inspect an illustrative shell model; and navigate to neighboring elements.
 - **Compare:** Select up to four elements and compare their atomic, physical, and chemical properties. Share selections through the URL.
@@ -37,7 +37,7 @@ bun run format:check
 
 On small screens, the default element grid remains readable. The Table control shows the complete 18-group layout in a labeled scroll region. Selecting a mobile element opens its detail page. Family filtering remains available above the grid.
 
-Use `/` to focus search, arrow keys to move around the desktop periodic table, and Enter or Space to select. All controls have visible focus indicators. Both appearances are paired independently, respect reduced motion, and remember the selected appearance when browser storage is available.
+Use arrow keys to move around the desktop periodic table, and Enter or Space to select. All controls have visible focus indicators. Both appearances are paired independently, respect reduced motion, and remember the selected appearance when browser storage is available.
 
 ## Deployment
 
@@ -56,7 +56,7 @@ src/app.css                 Paired theme tokens, fonts, and shared controls
 design-system/periodicity/  Design decisions and interaction principles
 ```
 
-Svelte 5 runes drive the interface. SvelteKit 3 uses package subpath imports (`#lib/*`) and its current configuration in `vite.config.ts`. URL state uses the effective shallow-navigation URL so repeated interactions preserve search, selections, and filters.
+Svelte 5 runes drive the interface. SvelteKit 3 uses package subpath imports (`#lib/*`) and its current configuration in `vite.config.ts`. URL state uses the effective shallow-navigation URL so repeated interactions preserve selections, display modes, temperature, and filters.
 
 ## Reference data
 

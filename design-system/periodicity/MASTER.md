@@ -21,12 +21,12 @@ Space Grotesk carries the chemical symbols, titles, and wordmark. DM Sans carrie
 
 ## Layout
 
-Desktop keeps all 18 groups visible. Selection occupies the table's natural empty space, rather than displacing its scientific geometry. A compact toolbar controls search, data display, and temperature. Category filters sit beneath the table. Every page has the same top navigation.
+Desktop keeps all 18 groups visible. Selection occupies the table's natural empty space, rather than displacing its scientific geometry. The “Color by” selector occupies the toolbar's left side. Temperature controls and state counts appear on the right only when physical-state coloring is selected. The temperature panel has no outer border and retains its space when hidden, so changing coloring modes does not move the selector or table. Hidden controls are inert and excluded from accessibility navigation. On mobile, the selector comes first and the reserved temperature area follows below it. Category filters sit beneath the table. Every page has the same top navigation.
 
 ```text
 wordmark           Explore / Trends / Compare        Calculator / Theme
 The periodic table.                       brief context
-search                         display          temperature
+display                  physical-state temperature / counts
 group labels 1 ......................................... 18
 H             element preview in natural gap             He
 Li Be         symbol / facts / simplified shell model     B ... Ne

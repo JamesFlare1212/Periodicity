@@ -6,7 +6,6 @@
 		categories,
 		elements,
 		getElement,
-		searchElements,
 		getPhaseAtTemperature,
 		trendDefinitions,
 		normalizeTrendValue,
@@ -18,22 +17,15 @@
 	import ElementPreview from '#lib/components/ElementPreview.svelte';
 	import Icon from '#lib/components/Icon.svelte';
 
-	let query = $state('');
 	let category = $state<CategoryId | ''>('');
 	let display = $state<'families' | 'phase' | TrendId>('families');
 	let temperature = $state(298);
-	let temperatureOpen = $state(false);
 	let selected = $state<Element | null>(null);
 	let hovered = $state<Element | null>(null);
 	let mobileView = $state<'grid' | 'table'>('grid');
 	let effectiveUrl = $derived(page.shallow?.url ?? page.url);
 	let preview = $derived(selected ?? hovered ?? getElement(6)!);
-	let searchMatches = $derived(new Set(searchElements(query).map((element) => element.number)));
-	let matches = $derived(
-		elements.filter(
-			(element) => searchMatches.has(element.number) && (!category || element.category === category)
-		)
-	);
+	let matches = $derived(elements.filter((element) => !category || element.category === category));
 	let matchedNumbers = $derived(new Set(matches.map((element) => element.number)));
 	let phaseCounts = $derived(
 		elements.reduce(
@@ -50,7 +42,6 @@
 	$effect(() => {
 		if (!browser) return;
 		const params = effectiveUrl.searchParams;
-		query = params.get('q') ?? '';
 		const c = params.get('family');
 		category = categories.some((item) => item.id === c) ? (c as CategoryId) : '';
 		const d = params.get('display');
@@ -60,7 +51,6 @@
 				: 'families';
 		const t = Number(params.get('temperature') ?? 298);
 		temperature = Number.isFinite(t) ? Math.min(6000, Math.max(0, t)) : 298;
-		temperatureOpen = display === 'phase';
 		selected = getElement(params.get('element') ?? '') ?? null;
 	});
 	function update(params: Record<string, string | null>) {
@@ -83,14 +73,17 @@
 		update({ family: category || null });
 	}
 	function reset() {
-		query = '';
 		category = '';
-		update({ q: null, family: null });
+		update({ family: null });
 	}
 	function changeDisplay(value: typeof display) {
 		display = value;
-		temperatureOpen = value === 'phase';
 		update({ display: value === 'families' ? null : value });
+	}
+	function changeTemperature(value: string) {
+		temperature = Math.min(6000, Math.max(0, Number(value) || 0));
+		display = 'phase';
+		update({ temperature: String(temperature), display: 'phase' });
 	}
 	function arrowNavigate(event: KeyboardEvent, element: Element) {
 		let next: Element | undefined;
@@ -128,29 +121,7 @@
 		</div>
 	</div>
 	<div class="table-toolbar">
-		<div class="search-field">
-			<Icon name="search" size={18} /><label class="sr-only" for="element-search"
-				>Search elements</label
-			><input
-				id="element-search"
-				type="search"
-				autocomplete="off"
-				placeholder="Search by name, symbol or number"
-				value={query}
-				oninput={(event) => {
-					query = event.currentTarget.value;
-					update({ q: query || null });
-				}}
-			/>{#if query}<button
-					class="clear-search"
-					aria-label="Clear search"
-					onclick={() => {
-						query = '';
-						update({ q: null });
-					}}><Icon name="close" size={16} /></button
-				>{/if}<kbd>/</kbd>
-		</div>
-		<div class="toolbar-right">
+		<div class="toolbar-controls">
 			<div class="display-field">
 				<label for="display">Color by</label><select
 					id="display"
@@ -162,16 +133,6 @@
 						>{/each}</select
 				>
 			</div>
-			<button
-				class="temperature-button"
-				class:active={temperatureOpen}
-				aria-expanded={temperatureOpen}
-				onclick={() => {
-					temperatureOpen = !temperatureOpen;
-					if (temperatureOpen) changeDisplay('phase');
-					else changeDisplay('families');
-				}}><Icon name="temperature" size={18} />{temperature} <span>K</span></button
-			>
 			<div class="mobile-view" aria-label="Element layout">
 				<button
 					class:active={mobileView === 'grid'}
@@ -186,40 +147,45 @@
 				>
 			</div>
 		</div>
-	</div>
-	{#if temperatureOpen}<div class="temperature-panel panel">
+		<div
+			class="temperature-panel"
+			class:inactive={display !== 'phase'}
+			inert={display !== 'phase'}
+			aria-hidden={display !== 'phase'}
+		>
 			<div class="temperature-control">
-				<label for="temperature-range">Temperature <b>{temperature} K</b></label><input
+				<label for="temperature-range">Temperature</label>
+				<input
 					id="temperature-range"
 					type="range"
 					min="0"
 					max="6000"
 					step="1"
 					value={temperature}
-					oninput={(event) => {
-						temperature = Number(event.currentTarget.value);
-						update({ temperature: String(temperature) });
-					}}
-				/><label class="sr-only" for="temperature-value">Temperature in kelvin</label><input
-					id="temperature-value"
-					type="number"
-					min="0"
-					max="6000"
-					value={temperature}
-					onchange={(event) => {
-						temperature = Math.min(6000, Math.max(0, Number(event.currentTarget.value) || 0));
-						update({ temperature: String(temperature) });
-					}}
+					aria-valuetext={`${temperature} kelvin`}
+					oninput={(event) => changeTemperature(event.currentTarget.value)}
 				/>
+				<div class="temperature-value">
+					<label class="sr-only" for="temperature-value">Temperature in kelvin</label>
+					<input
+						id="temperature-value"
+						type="number"
+						min="0"
+						max="6000"
+						value={temperature}
+						onchange={(event) => changeTemperature(event.currentTarget.value)}
+					/>
+					<span aria-hidden="true">K</span>
+				</div>
 			</div>
-			<p>Approximate states at ordinary pressure. Unmeasured transitions remain unknown.</p>
 			<div class="phase-counts">
 				{#each ['solid', 'liquid', 'gas', 'unknown'] as state}<span
 						style={`--phase-color:var(--phase-${state})`}
 						><i></i>{state} <b>{phaseCounts[state as keyof typeof phaseCounts]}</b></span
 					>{/each}
 			</div>
-		</div>{/if}
+		</div>
+	</div>
 	<div class="mobile-family-filter">
 		<label for="mobile-family">Family</label><select
 			id="mobile-family"
@@ -238,11 +204,9 @@
 	</div>
 	<div class="table-caption">
 		<span
-			>{#if query || category}<b>{matches.length}</b> of 118 elements{#if category}
-					in {categories.find((item) => item.id === category)?.label.toLowerCase()}{/if}{:else}<span
-					class="desktop-selection-hint">Click to lock a preview; click again for details</span
-				><span class="mobile-selection-hint">Tap to lock a preview; tap again for details</span
-				>{/if}</span
+			>{#if category}<b>{matches.length}</b> of 118 elements in {categories
+					.find((item) => item.id === category)
+					?.label.toLowerCase()}{/if}</span
 		><span class="table-caption-right" class:affinity={display === 'electronAffinity'}
 			>{#if isTrend && trend}{trend.label}
 				<span
@@ -257,12 +221,6 @@
 				>{/if}</span
 		>
 	</div>
-	{#if matches.length === 0}<div class="empty-state panel" role="status">
-			<Icon name="search" size={30} />
-			<h2>No elements found</h2>
-			<p>Try a name like “carbon”, a symbol like “Fe”, or an atomic number.</p>
-			<button class="button" onclick={reset}>Clear search and filters</button>
-		</div>{/if}
 	<!-- svelte-ignore a11y_no_noninteractive_tabindex (The labeled table scroll region supports keyboard scrolling.) -->
 	<div
 		class="table-scroll"
@@ -337,9 +295,8 @@
 	</div>
 	<div class="legend-wrap">
 		<div class="legend-heading">
-			<span>Element families</span>{#if category || query}<button
-					class="reset-filter"
-					onclick={reset}><Icon name="reset" size={13} />Reset filters</button
+			<span>Element families</span>{#if category}<button class="reset-filter" onclick={reset}
+					><Icon name="reset" size={13} />Reset filters</button
 				>{:else}<span class="legend-tip">Select a family to highlight it</span>{/if}
 		</div>
 		<div class="family-legend" aria-label="Filter by element family">
@@ -366,21 +323,6 @@
 		<a href="/trends/">Discover the patterns <Icon name="arrow-right" size={17} /></a>
 	</div>
 </div>
-<svelte:window
-	onkeydown={(event) => {
-		if (
-			event.key === '/' &&
-			!(
-				event.target instanceof HTMLInputElement ||
-				event.target instanceof HTMLTextAreaElement ||
-				event.target instanceof HTMLSelectElement
-			)
-		) {
-			event.preventDefault();
-			document.getElementById('element-search')?.focus();
-		}
-	}}
-/>
 
 <style>
 	.explore-page {
@@ -419,59 +361,15 @@
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		gap: 24px;
-		padding-bottom: 22px;
+		gap: 16px;
+		padding-bottom: 16px;
 		border-bottom: 1px solid var(--border);
-	}
-	.search-field {
-		display: flex;
-		align-items: center;
-		position: relative;
-		width: 355px;
-		background: var(--surface);
-		border: 1px solid var(--border);
-		border-radius: 8px;
-		padding-left: 13px;
-		color: var(--muted);
-	}
-	.search-field input {
-		width: 100%;
-		border: none;
-		background: transparent;
-		padding: 11px 12px;
-		font-size: 12px;
-		padding-right: 45px;
-	}
-	.search-field input:focus-visible {
-		outline-offset: 0;
-	}
-	.search-field input::-webkit-search-cancel-button {
-		display: none;
 	}
 	kbd {
 		font-family: inherit;
 		font-size: 11px;
 	}
-	.search-field kbd {
-		position: absolute;
-		right: 13px;
-		border: 1px solid var(--border);
-		border-radius: 3px;
-		padding: 0 6px;
-	}
-	.clear-search {
-		position: absolute;
-		right: 0;
-		display: grid;
-		place-items: center;
-		width: 44px;
-		height: 44px;
-		border: 0;
-		background: var(--surface);
-		border-radius: 8px;
-		z-index: 1;
-	}
-	.toolbar-right {
+	.toolbar-controls {
 		display: flex;
 		gap: 12px;
 		align-items: center;
@@ -482,85 +380,96 @@
 		align-items: center;
 	}
 	.display-field label {
-		font-size: 12px;
-		color: var(--muted);
+		font-size: 14px;
+		font-weight: 600;
+		color: var(--text);
 		white-space: nowrap;
 	}
 	.display-field select {
-		font-size: 12px;
-		min-width: 175px;
+		font-size: 16px;
+		font-weight: 600;
+		min-width: 220px;
+		min-height: 48px;
+		padding: 10px 14px;
+		border: 2px solid var(--accent);
+		background: var(--accent-soft);
+		transition: background var(--motion-fast);
 	}
-	.temperature-button {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		gap: 6px;
-		min-height: 44px;
-		padding: 0 13px;
-		border: 1px solid var(--border);
-		border-radius: 8px;
-		background: var(--surface);
-		font-size: 12px;
-	}
-	.temperature-button span {
-		color: var(--muted);
-	}
-	.temperature-button.active {
-		border-color: var(--accent);
-		color: var(--accent);
+	.display-field select:hover {
+		background: var(--surface-raised);
 	}
 	.mobile-view {
 		display: none;
 	}
 	.temperature-panel {
-		padding: 16px 20px;
-		margin-top: 16px;
-		display: flex;
-		flex-wrap: wrap;
-		gap: 10px 24px;
+		flex: 0 1 960px;
+		min-width: 0;
+		margin-left: auto;
+		padding: 4px 12px;
+		display: grid;
+		grid-template-columns: minmax(240px, 1fr) auto;
+		gap: 4px 12px;
 		align-items: center;
+	}
+	.temperature-panel.inactive {
+		visibility: hidden;
 	}
 	.temperature-control {
 		display: flex;
 		align-items: center;
-		gap: 16px;
-		flex: 1;
+		gap: 8px;
+		min-width: 0;
 	}
 	.temperature-control label {
 		font-size: 12px;
 		white-space: nowrap;
 	}
-	.temperature-control b {
-		color: var(--accent);
-		margin-left: 8px;
-		font-weight: 500;
+	.temperature-value {
+		position: relative;
+		flex-shrink: 0;
+	}
+	.temperature-value span {
+		position: absolute;
+		right: 10px;
+		top: 50%;
+		transform: translateY(-50%);
+		color: var(--muted);
+		font-size: 12px;
+		pointer-events: none;
 	}
 	.temperature-control input[type='range'] {
 		flex: 1;
 		width: 120px;
 		min-width: 70px;
+		max-width: 240px;
+		margin: 0;
 		padding: 0;
 		accent-color: var(--accent);
 		border: 0;
 	}
 	.temperature-control input[type='number'] {
-		width: 90px;
+		width: 76px;
+		padding-left: 8px;
+		padding-right: 28px;
 		font-size: 13px;
+		font-variant-numeric: tabular-nums;
+		appearance: textfield;
 	}
-	.temperature-panel p {
-		font-size: 11px;
-		color: var(--muted);
+	.temperature-control input[type='number']::-webkit-inner-spin-button,
+	.temperature-control input[type='number']::-webkit-outer-spin-button {
+		appearance: none;
 	}
 	.phase-counts {
 		display: flex;
-		gap: 16px;
+		flex-wrap: wrap;
+		gap: 4px 10px;
 		font-size: 12px;
-		width: 100%;
 	}
 	.phase-counts span {
 		display: flex;
 		gap: 6px;
 		align-items: center;
+		white-space: nowrap;
 		text-transform: capitalize;
 		color: var(--phase-color);
 	}
@@ -572,6 +481,8 @@
 	}
 	.phase-counts b {
 		font-weight: 400;
+		min-width: 3ch;
+		font-variant-numeric: tabular-nums;
 	}
 	.table-caption {
 		display: flex;
@@ -582,9 +493,6 @@
 		color: var(--muted);
 		font-size: 11px;
 		min-height: 20px;
-	}
-	.mobile-selection-hint {
-		display: none;
 	}
 	.table-caption b {
 		color: var(--text);
@@ -618,7 +526,7 @@
 		border-radius: 2px;
 	}
 	.periodic-grid {
-		--cell: clamp(57px, 4.9vw, 70px);
+		--cell: clamp(73px, calc(6.1vw - 3px), 83px);
 		display: grid;
 		grid-template-columns: 14px repeat(18, minmax(0, 1fr));
 		grid-template-rows: 23px repeat(7, var(--cell)) 13px repeat(2, var(--cell));
@@ -802,21 +710,13 @@
 	.mobile-family-filter {
 		display: none;
 	}
-	.empty-state {
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		gap: 12px;
-		padding: 32px 20px;
-		margin-bottom: 20px;
-	}
-	.empty-state h2 {
-		font-size: 21px;
-	}
-	.empty-state p {
-		font-size: 13px;
-		color: var(--muted);
-		text-align: center;
+	@media (max-width: 1200px) {
+		.temperature-panel {
+			grid-template-columns: minmax(0, 1fr);
+		}
+		.phase-counts {
+			grid-column: 1 / -1;
+		}
 	}
 	@media (max-width: 1000px) {
 		.table-caption-right.affinity {
@@ -830,17 +730,8 @@
 		.table-toolbar {
 			gap: 12px;
 		}
-		.search-field {
-			width: 320px;
-		}
-		.display-field {
-			gap: 8px;
-		}
-		.display-field select {
-			min-width: 158px;
-		}
 		.periodic-grid {
-			--cell: 57px;
+			--cell: 73px;
 			gap: 4px;
 		}
 		.table-preview {
@@ -855,34 +746,30 @@
 			margin-bottom: 22px;
 		}
 		.table-toolbar {
-			flex-wrap: wrap;
+			flex-direction: column;
+			align-items: stretch;
 			padding-bottom: 16px;
 			gap: 12px;
 		}
-		.search-field {
-			width: 100%;
+		.temperature-panel {
+			flex: none;
+			margin-left: 0;
 		}
-		.search-field input {
-			font-size: 16px;
-		}
-		.toolbar-right {
+		.toolbar-controls {
 			width: 100%;
 			gap: 8px;
+			align-items: flex-end;
 		}
 		.display-field {
 			flex: 1;
 			min-width: 0;
-		}
-		.display-field label {
-			display: none;
+			flex-direction: column;
+			align-items: stretch;
+			gap: 6px;
 		}
 		.display-field select {
 			width: 100%;
 			min-width: 0;
-			font-size: 13px;
-		}
-		.temperature-button {
-			padding: 0 8px;
 		}
 		.mobile-view {
 			display: flex;
@@ -934,7 +821,7 @@
 		}
 		.periodic-grid {
 			width: 1120px;
-			--cell: 68px;
+			--cell: 83px;
 			gap: 5px;
 		}
 		.table-preview {
@@ -943,7 +830,7 @@
 		.mobile-element-grid {
 			display: grid;
 			grid-template-columns: repeat(6, minmax(0, 1fr));
-			grid-auto-rows: 94px;
+			grid-auto-rows: 91px;
 			gap: 7px;
 			margin-top: 10px;
 		}
@@ -955,11 +842,8 @@
 			margin-top: 20px;
 		}
 		.table-caption-right,
-		.desktop-selection-hint {
+		.table-caption-right.affinity {
 			display: none;
-		}
-		.mobile-selection-hint {
-			display: inline;
 		}
 		.legend-wrap {
 			margin-top: 20px;
@@ -986,23 +870,33 @@
 			max-width: 120px;
 			font-size: 11px;
 		}
-		.temperature-control {
-			flex-wrap: wrap;
-			gap: 10px;
-		}
-		.temperature-control label {
-			width: 100%;
-		}
-		.temperature-panel {
-			padding: 14px;
-		}
-		.phase-counts {
-			gap: 12px;
-			font-size: 11px;
-		}
 	}
 
 	@media (max-width: 600px) {
+		.toolbar-controls {
+			flex-wrap: wrap;
+		}
+		.display-field {
+			flex-basis: 220px;
+		}
+		.mobile-view {
+			margin-left: auto;
+		}
+		.temperature-panel {
+			grid-template-columns: minmax(0, 1fr);
+			padding: 4px 12px 8px;
+		}
+		.temperature-control {
+			gap: 8px;
+		}
+		.temperature-control input[type='number'] {
+			width: 84px;
+			font-size: 16px;
+		}
+		.phase-counts {
+			gap: 4px 12px;
+			font-size: 11px;
+		}
 		.mobile-element-grid {
 			grid-template-columns: repeat(4, minmax(0, 1fr));
 		}

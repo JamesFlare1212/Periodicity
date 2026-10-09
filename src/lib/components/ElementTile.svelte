@@ -63,7 +63,7 @@
 		background: var(--tile-bg);
 		color: var(--tile-color);
 		border-radius: 5px;
-		padding: 6px 3px 4px;
+		padding: 14px 3px 2px;
 		display: flex;
 		flex-direction: column;
 		align-items: center;
@@ -103,27 +103,30 @@
 		font-variant-numeric: tabular-nums;
 	}
 	.symbol {
+		flex-shrink: 0;
 		font-family: var(--font-display);
 		font-weight: 500;
 		font-size: clamp(21px, 2vw, 29px);
 		line-height: 1.05;
-		margin-top: 4px;
 		letter-spacing: -0.04em;
 	}
 	.name {
+		flex-shrink: 0;
 		font-size: clamp(8px, 0.72vw, 10px);
 		margin-top: 3px;
-		line-height: 1.1;
+		line-height: 1.4;
 		max-width: 100%;
+		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
 	}
 	.value {
+		flex-shrink: 0;
 		font-size: clamp(8px, 0.67vw, 10px);
-		line-height: 1.2;
+		line-height: 1.4;
 		font-variant-numeric: tabular-nums;
-		margin-top: 3px;
 		max-width: 100%;
+		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
 	}
