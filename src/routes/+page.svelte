@@ -2,6 +2,7 @@
 	import { browser } from '$app/env';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
+	import { tick } from 'svelte';
 	import {
 		categories,
 		elements,
@@ -15,7 +16,9 @@
 	} from '#lib/data/elements.js';
 	import ElementTile from '#lib/components/ElementTile.svelte';
 	import ElementPreview from '#lib/components/ElementPreview.svelte';
+	import MassAddition from '#lib/components/MassAddition.svelte';
 	import Icon from '#lib/components/Icon.svelte';
+	import { calculateElementSelection } from '#lib/chemistry/element-selection.js';
 
 	let category = $state<CategoryId | ''>('');
 	let display = $state<'families' | 'phase' | TrendId>('families');
@@ -23,6 +26,15 @@
 	let selected = $state<Element | null>(null);
 	let hovered = $state<Element | null>(null);
 	let mobileView = $state<'grid' | 'table'>('grid');
+	let massSelection = $state<Element[]>([]);
+	let massAddButton: HTMLButtonElement;
+	let massTrigger: HTMLButtonElement | undefined;
+	let massResult = $derived(calculateElementSelection(massSelection));
+	let massAnnouncement = $derived(
+		massResult
+			? `${massResult.formula}: ${Number(massResult.totalMass.toFixed(3))} grams per mole, ${massResult.totalAtoms} ${massResult.totalAtoms === 1 ? 'atom' : 'atoms'}.`
+			: ''
+	);
 	let effectiveUrl = $derived(page.shallow?.url ?? page.url);
 	let preview = $derived(selected ?? hovered ?? getElement(6)!);
 	let matches = $derived(elements.filter((element) => !category || element.category === category));
@@ -72,6 +84,24 @@
 		category = category === id ? '' : id;
 		update({ family: category || null });
 	}
+	function addToMass(element: Element, trigger: HTMLButtonElement) {
+		massSelection = [...massSelection, element];
+		massTrigger = trigger;
+	}
+	async function closeMass() {
+		massSelection = [];
+		await tick();
+		const target =
+			massTrigger?.isConnected && massTrigger.getClientRects().length ? massTrigger : massAddButton;
+		target?.focus({ preventScroll: true });
+	}
+	function undoMass() {
+		if (massSelection.length === 1) {
+			void closeMass();
+			return;
+		}
+		massSelection = massSelection.slice(0, -1);
+	}
 	function reset() {
 		category = '';
 		update({ family: null });
@@ -109,8 +139,17 @@
 	}
 </script>
 
+<svelte:window
+	onkeydown={(event) => {
+		if (!event.defaultPrevented && event.key === 'Escape' && massSelection.length > 0) {
+			event.preventDefault();
+			void closeMass();
+		}
+	}}
+/>
 <svelte:head><title>Periodicity — An atlas of the elements</title></svelte:head>
 <div class="page-shell explore-page">
+	<p class="sr-only" role="status">{massAnnouncement}</p>
 	<div class="explore-heading">
 		<div>
 			<h1 class="page-heading">The periodic table.</h1>
@@ -133,6 +172,15 @@
 						>{/each}</select
 				>
 			</div>
+			<button
+				type="button"
+				class="button quick-mass-add"
+				bind:this={massAddButton}
+				aria-label={`Add ${preview.symbol} to mass, ${preview.name}`}
+				title="Add the previewed element, or right-click any element tile"
+				onclick={(event) => addToMass(preview, event.currentTarget)}
+				><Icon name="plus" size={17} />Add {preview.symbol} to mass</button
+			>
 			<div class="mobile-view" aria-label="Element layout">
 				<button
 					class:active={mobileView === 'grid'}
@@ -199,8 +247,17 @@
 				>{/each}</select
 		>
 	</div>
-	<div class="mobile-preview panel">
-		<ElementPreview element={preview} {display} {temperature} />
+	<div class="mobile-preview" class:panel={!massResult}>
+		{#if massResult}
+			<MassAddition
+				selection={massSelection}
+				result={massResult}
+				onundo={undoMass}
+				onclose={closeMass}
+			/>
+		{:else}
+			<ElementPreview element={preview} {display} {temperature} />
+		{/if}
 	</div>
 	<div class="table-caption">
 		<span
@@ -239,7 +296,18 @@
 					class="period-label"
 					style={`grid-row:${period + 1}`}>{period}</span
 				>{/each}
-			<div class="table-preview"><ElementPreview element={preview} {display} {temperature} /></div>
+			<div class="table-preview">
+				{#if massResult}
+					<MassAddition
+						selection={massSelection}
+						result={massResult}
+						onundo={undoMass}
+						onclose={closeMass}
+					/>
+				{:else}
+					<ElementPreview element={preview} {display} {temperature} />
+				{/if}
+			</div>
 			{#each elements as element}<div
 					class="tile-position"
 					style={`grid-column:${element.xpos + 1};grid-row:${element.ypos + 1};--heat:${isTrend ? (normalizeTrendValue(element, display as TrendId) ?? 0) : 0}`}
@@ -254,6 +322,7 @@
 						{display}
 						{temperature}
 						onselect={selectElement}
+						onadd={addToMass}
 						onpreview={(element) => (hovered = element)}
 						onleave={() => {
 							if (
@@ -289,6 +358,7 @@
 				{display}
 				{temperature}
 				onselect={selectElement}
+				onadd={addToMass}
 				onpreview={() => {}}
 				onleave={() => {}}
 			/>{/each}
@@ -317,7 +387,9 @@
 		<div>
 			<span class="sample-cell">6 <b>C</b></span>
 			<p>
-				<b>A world inside every square.</b><span>Atomic number, symbol, name and atomic mass.</span>
+				<b>A world inside every square.</b><span
+					>Click to lock an element. Right-click or Shift+Enter to add to mass.</span
+				>
 			</p>
 		</div>
 		<a href="/trends/">Discover the patterns <Icon name="arrow-right" size={17} /></a>
@@ -378,6 +450,9 @@
 		display: flex;
 		gap: 12px;
 		align-items: center;
+	}
+	.quick-mass-add {
+		white-space: nowrap;
 	}
 	.display-field label {
 		font-size: 14px;

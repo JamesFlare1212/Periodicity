@@ -247,4 +247,13 @@
 			font-size: 11px;
 		}
 	}
+	@media (max-width: 360px) {
+		nav {
+			gap: 4px;
+		}
+		nav a {
+			gap: 6px;
+			padding-inline: 6px;
+		}
+	}
 </style>

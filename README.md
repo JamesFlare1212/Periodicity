@@ -29,13 +29,14 @@ bun run format:check
 ## Explore
 
 - **Periodic table:** Highlight a family; inspect an element; switch between family colors, physical states, and property heatmaps.
+- **Quick molar mass:** Right-click element tiles to add atoms, or focus a tile and press Shift+Enter. Repeated elements become formula subscripts; the table preview shows the individual atomic masses and total in g/mol. On touch screens, select an element and use “Add [symbol] to mass.” Undo removes the last atom; Close or Escape clears the calculation. Open “Full calculator” for the formula’s composition and mass percentages.
 - **Temperature:** Select “Physical state” in the left-hand “Color by” menu to show temperature controls and state counts on the right. The borderless controls are hidden in other coloring modes while retaining their layout space, so switching modes does not move the table. Explore estimated states from 0–6,000 K; adjusting the temperature activates physical-state coloring. This is an educational approximation at ordinary pressure. Missing measurements remain unknown, and transitions that do not define a liquid interval are handled separately.
 - **Trends:** Switch between ionization energy, electronegativity, atomic radius, electron affinity, density, and melting point. Inspect exact values on an interactive chart or a sortable, searchable, paginated table. Missing data are represented by gaps, rather than zeroes.
 - **Element pages:** Read the original summaries, electron configurations, discovery information, and physical properties; inspect an illustrative shell model; and navigate to neighboring elements.
-- **Compare:** Select up to four elements and compare their atomic, physical, and chemical properties. Share selections through the URL.
+- **Compare:** Click elements directly on the periodic table to compare up to four elements. Click a selected tile again or click its label to remove it, or clear the whole selection. Use arrow keys to move between tiles and Enter or Space to select. The full table scrolls horizontally on small screens. Compare atomic, physical, and chemical properties, and share selections through the URL.
 - **Molar mass:** Enter formulas such as `H2O`, `C6H12O6`, `Ca(OH)2`, `K4[Fe(CN)6]`, or `CuSO4·5H2O`. Nested parentheses and brackets, pasted subscripts, and middle-dot hydrates are supported. Results include each element's contribution and mass percentage.
 
-On small screens, the default element grid remains readable. The Table control shows the complete 18-group layout in a labeled scroll region. Selecting a mobile element opens its detail page. Family filtering remains available above the grid.
+On small screens, the default element grid remains readable. The Table control shows the complete 18-group layout in a labeled scroll region. Selecting an element locks its preview; select it again to open its detail page. Family filtering remains available above the grid.
 
 Use arrow keys to move around the desktop periodic table, and Enter or Space to select. All controls have visible focus indicators. Both appearances are paired independently, respect reduced motion, and remember the selected appearance when browser storage is available.
 

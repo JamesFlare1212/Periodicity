@@ -4,13 +4,11 @@
 	import { page } from '$app/state';
 	import { tick } from 'svelte';
 	import Icon from '#lib/components/Icon.svelte';
-	import { categories, getElement, searchElements, type Element } from '#lib/data/elements.js';
+	import PeriodicTablePicker from '#lib/components/PeriodicTablePicker.svelte';
+	import { categories, getElement, type Element } from '#lib/data/elements.js';
 
-	let query = $state('');
-	let candidate = $state('');
 	let pending = $state(false);
 	let notice = $state('');
-	let searchInput: HTMLInputElement;
 	const number = new Intl.NumberFormat('en-US', { maximumFractionDigits: 4 });
 
 	function readSelection(raw: string | null): Element[] {
@@ -29,11 +27,6 @@
 	const effectiveUrl = $derived(page.shallow?.url ?? page.url);
 	const selected = $derived(
 		readSelection(browser ? effectiveUrl.searchParams.get('elements') : null)
-	);
-	const available = $derived(
-		searchElements(query).filter(
-			(element) => !selected.some((chosen) => chosen.number === element.number)
-		)
 	);
 
 	function categoryLabel(category: string) {
@@ -114,34 +107,42 @@
 			await goto(url, { shallow: true, replace: true, reset: false });
 			notice = message;
 		} catch {
-			notice = 'The comparison could not be updated. Try adding the element again.';
+			notice = 'The comparison could not be updated. Try again.';
 		} finally {
 			pending = false;
 		}
 	}
 
-	async function addElement(event: SubmitEvent) {
-		event.preventDefault();
-		const element = getElement(Number(candidate));
-		if (
-			!element ||
-			selected.length >= 4 ||
-			selected.some((chosen) => chosen.number === element.number)
-		)
-			return;
-		await setSelection(
-			[...selected, element],
-			`Added ${element.name}. ${selected.length + 1} elements selected.`
-		);
-		candidate = '';
-		query = '';
+	function toggleElement(element: Element) {
+		if (pending) return;
+		if (selected.some((chosen) => chosen.number === element.number)) {
+			const next = selected.filter((chosen) => chosen.number !== element.number);
+			void setSelection(next, `Removed ${element.name}. ${next.length} elements selected.`);
+		} else if (selected.length < 4) {
+			void setSelection(
+				[...selected, element],
+				`Added ${element.name}. ${selected.length + 1} elements selected.`
+			);
+		} else {
+			notice = 'Four elements selected. Remove an element to choose another.';
+		}
 	}
 
 	async function removeElement(element: Element) {
+		if (pending) return;
 		const next = selected.filter((chosen) => chosen.number !== element.number);
 		await setSelection(next, `Removed ${element.name}. ${next.length} elements selected.`);
 		await tick();
-		searchInput?.focus();
+		document
+			.querySelector<HTMLButtonElement>(`.periodic-picker [data-element="${element.number}"]`)
+			?.focus();
+	}
+
+	async function clearSelection() {
+		if (pending) return;
+		await setSelection([], 'Comparison cleared. Select elements from the periodic table.');
+		await tick();
+		document.querySelector<HTMLButtonElement>('.periodic-picker [data-element="1"]')?.focus();
 	}
 
 	function preset(identifiers: number[]) {
@@ -162,100 +163,56 @@
 	<header class="tool-header">
 		<div>
 			<h1 class="page-heading">Compare elements</h1>
-			<p class="text-muted">Look closer at what elements share, and what sets them apart.</p>
+			<p class="text-muted">
+				Pick up to four elements from the periodic table to compare their properties.
+			</p>
 		</div>
-		<a class="button" href="/"> <Icon name="table" size={18} /> Periodic table </a>
 	</header>
 
 	<section class="selection-panel panel" aria-labelledby="selection-heading">
 		<div class="selection-heading">
-			<h2 id="selection-heading">Your comparison</h2>
-			<span class="selection-count">{selected.length} of 4 elements</span>
+			<h2 id="selection-heading">Select elements</h2>
+			<div class="selection-actions">
+				<span class="selection-count">{selected.length} of 4 selected</span>
+				<button
+					class="clear-selection"
+					type="button"
+					disabled={pending || selected.length === 0}
+					onclick={clearSelection}>Clear all</button
+				>
+			</div>
 		</div>
 
-		{#if selected.length > 0}
-			<div class="selected-elements" style={`--columns: ${Math.max(2, selected.length)}`}>
+		<div class="selected-elements" aria-label="Selected elements">
+			{#if selected.length > 0}
 				{#each selected as element (element.number)}
-					<div
+					<button
+						type="button"
 						class="selected-element"
 						style={`--element-color: var(--category-${element.category}); --element-bg: var(--category-${element.category}-bg)`}
+						aria-label={`Remove ${element.name} from comparison`}
+						onclick={() => removeElement(element)}
+						disabled={pending}
 					>
-						<div class="element-topline">
-							<span class="atomic-number">{element.number}</span>
-							<button
-								class="icon-button"
-								type="button"
-								aria-label={`Remove ${element.name} from comparison`}
-								onclick={() => removeElement(element)}
-								disabled={pending}
-							>
-								<Icon name="close" size={16} />
-							</button>
-						</div>
-						<a class="element-link" href={`/element/${element.number}/`}>
-							<strong class="element-symbol">{element.symbol}</strong>
-							<span class="element-name">{element.name}</span>
-						</a>
-						<span class="element-category">{categoryLabel(element.category)}</span>
-					</div>
+						<strong>{element.symbol}</strong>
+						<span>{element.name}</span>
+						<Icon name="close" size={14} />
+					</button>
 				{/each}
-			</div>
-		{:else}
-			<div class="empty-selection">
-				<Icon name="table" size={28} />
-				<p>Add your first element below to begin a comparison.</p>
-			</div>
-		{/if}
+			{:else}
+				<p class="empty-selection">Click an element below to start your comparison.</p>
+			{/if}
+		</div>
+		<p class="selection-instructions text-muted" id="selection-instructions">
+			{selected.length >= 4
+				? 'Four elements selected. Click a selected element again to remove it.'
+				: 'Click an element to select it. Click it again to remove it.'}
+		</p>
 
-		<form class="add-element-form" onsubmit={addElement}>
-			<div class="search-field">
-				<label for="compare-search">Find an element</label>
-				<div class="search-input-wrap">
-					<Icon name="search" size={18} />
-					<input
-						id="compare-search"
-						type="search"
-						bind:this={searchInput}
-						bind:value={query}
-						oninput={() => (candidate = '')}
-						placeholder="Name, symbol, or atomic number"
-						disabled={selected.length >= 4 || pending}
-						autocomplete="off"
-					/>
-				</div>
-			</div>
-			<div class="select-field">
-				<label for="compare-element">Element to add</label>
-				<select
-					id="compare-element"
-					bind:value={candidate}
-					disabled={selected.length >= 4 || pending || available.length === 0}
-				>
-					<option value=""
-						>{available.length === 0 ? 'No matching elements' : 'Choose an element'}</option
-					>
-					{#each available as element}
-						<option value={element.number}
-							>{element.number}. {element.name} ({element.symbol})</option
-						>
-					{/each}
-				</select>
-			</div>
-			<button
-				class="button button-primary add-button"
-				type="submit"
-				disabled={!candidate || selected.length >= 4 || pending}
-			>
-				<Icon name="plus" size={18} />
-				{pending ? 'Updating…' : 'Add element'}
-			</button>
-		</form>
+		<PeriodicTablePicker {selected} {pending} onselect={toggleElement} />
+
 		<div class="selection-footer">
-			<p class="text-muted">
-				{selected.length >= 4
-					? 'Comparison is full. Remove an element to add another.'
-					: 'Choose up to four elements. Your selection is saved in this page’s link.'}
-			</p>
+			<p class="text-muted">Your selection is saved in this page’s link.</p>
 			<div class="presets" aria-label="Suggested comparisons">
 				<span>Try</span>
 				<button type="button" onclick={() => preset([6, 14, 32, 50])} disabled={pending}
@@ -272,7 +229,7 @@
 	{#if selected.length > 0}
 		<section class="property-comparison" aria-labelledby="properties-heading">
 			<div class="properties-heading">
-				<h2 id="properties-heading">Side by side</h2>
+				<h2 id="properties-heading" tabindex="-1">Side by side</h2>
 				<p class="text-muted">
 					{selected.length === 1
 						? 'Add another element to see how its properties compare.'
@@ -340,10 +297,6 @@
 		padding-bottom: 64px;
 	}
 	.tool-header {
-		display: flex;
-		align-items: flex-start;
-		justify-content: space-between;
-		gap: 20px;
 		margin-bottom: 32px;
 	}
 	.tool-header p {
@@ -351,19 +304,15 @@
 		font-size: 15px;
 		line-height: 1.6;
 	}
-	.tool-header > .button {
-		flex-shrink: 0;
-		margin-top: 4px;
-	}
 	.selection-panel {
-		padding: 28px;
+		padding: 24px;
 	}
 	.selection-heading {
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
 		gap: 16px;
-		margin-bottom: 22px;
+		margin-bottom: 16px;
 	}
 	h2 {
 		margin: 0;
@@ -375,125 +324,63 @@
 		color: var(--muted);
 		font-size: 14px;
 		font-variant-numeric: tabular-nums;
+		white-space: nowrap;
 	}
-	.selected-elements {
-		display: grid;
-		grid-template-columns: repeat(var(--columns), minmax(0, 1fr));
-		gap: 14px;
-	}
-	.selected-element {
-		display: flex;
-		flex-direction: column;
-		min-width: 0;
-		padding: 14px 20px 22px;
-		border: 1px solid color-mix(in srgb, var(--element-color) 34%, var(--border));
-		border-radius: 12px;
-		background: var(--element-bg);
-	}
-	.element-topline {
+	.selection-actions {
 		display: flex;
 		align-items: center;
-		justify-content: space-between;
-		min-height: 44px;
-		gap: 8px;
-	}
-	.atomic-number {
-		font-size: 15px;
-		color: var(--element-color);
-		font-variant-numeric: tabular-nums;
-	}
-	.element-topline .icon-button {
-		color: var(--muted);
-		min-width: 44px;
-		min-height: 44px;
-		margin-right: -10px;
-	}
-	.element-link {
-		display: flex;
-		flex-direction: column;
-		align-items: flex-start;
-		width: fit-content;
-		max-width: 100%;
-		color: var(--text);
-		text-decoration: none;
-		border-radius: 4px;
-	}
-	.element-link:hover .element-name {
-		text-decoration: underline;
-		text-underline-offset: 4px;
-	}
-	.element-symbol {
-		font-family: var(--font-display);
-		color: var(--element-color);
-		font-size: 58px;
-		font-weight: 600;
-		line-height: 1.2;
-		letter-spacing: -0.05em;
-	}
-	.element-name {
-		margin-top: 4px;
-		font-size: 17px;
-		font-weight: 500;
-		overflow-wrap: anywhere;
-	}
-	.element-category {
-		color: var(--muted);
-		margin-top: 8px;
-		font-size: 13px;
-		line-height: 1.5;
-	}
-	.add-element-form {
-		display: grid;
-		grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) auto;
 		gap: 16px;
-		align-items: end;
-		margin-top: 28px;
 	}
-	.add-element-form label {
-		display: block;
-		margin-bottom: 8px;
-		font-size: 14px;
-		font-weight: 500;
-	}
-	.search-input-wrap {
-		position: relative;
-	}
-	.search-input-wrap :global(svg) {
-		position: absolute;
-		left: 15px;
-		top: 16px;
-		color: var(--muted);
-		pointer-events: none;
-	}
-	input,
-	select {
-		height: 50px;
-		width: 100%;
-		min-width: 0;
-		color: var(--text);
-		background: var(--bg);
+	.clear-selection {
+		min-height: 44px;
+		padding: 0 12px;
 		border: 1px solid var(--border);
-		border-radius: 8px;
-		font: inherit;
-		font-size: 16px;
-	}
-	input {
-		padding: 0 12px 0 44px;
-	}
-	select {
-		padding: 0 36px 0 14px;
-	}
-	input::placeholder {
+		border-radius: 7px;
+		background: transparent;
 		color: var(--muted);
-		font-size: 14px;
-	}
-	input:disabled,
-	select:disabled {
-		opacity: 0.55;
-	}
-	.add-button {
-		height: 50px;
+		font-size: 13px;
 		white-space: nowrap;
+	}
+	.clear-selection:hover:not(:disabled) {
+		background: var(--surface-raised);
+		color: var(--text);
+	}
+	.selected-elements {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 8px;
+		min-height: 44px;
+	}
+	.selected-element {
+		display: inline-flex;
+		align-items: center;
+		gap: 10px;
+		min-height: 44px;
+		padding: 8px 12px;
+		border: 1px solid color-mix(in srgb, var(--element-color) 34%, var(--border));
+		border-radius: 7px;
+		background: var(--element-bg);
+		color: var(--text);
+		font-size: 13px;
+	}
+	.selected-element:hover:not(:disabled) {
+		border-color: var(--element-color);
+	}
+	.selected-element strong {
+		font-family: var(--font-display);
+		font-size: 20px;
+		font-weight: 500;
+		color: var(--element-color);
+	}
+	.selected-element :global(svg) {
+		color: var(--muted);
+	}
+	.selection-instructions {
+		min-height: 21px;
+		margin: 12px 0 20px;
+		font-size: 13px;
+		line-height: 1.6;
 	}
 	.selection-footer {
 		display: flex;
@@ -501,7 +388,9 @@
 		justify-content: space-between;
 		flex-wrap: wrap;
 		gap: 8px 20px;
-		margin-top: 14px;
+		margin-top: 20px;
+		padding-top: 12px;
+		border-top: 1px solid var(--border);
 	}
 	.selection-footer p {
 		margin: 0;
@@ -532,20 +421,8 @@
 		background: var(--surface-raised);
 	}
 	.empty-selection {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		gap: 16px;
-		min-height: 148px;
-		background: var(--bg);
-		border: 1px dashed var(--border);
-		border-radius: 8px;
-		padding: 20px;
 		color: var(--muted);
-	}
-	.empty-selection p {
-		margin: 0;
-		max-width: 40ch;
+		font-size: 14px;
 		line-height: 1.6;
 	}
 	.property-comparison {
@@ -653,13 +530,6 @@
 		font-size: 13px;
 		line-height: 1.7;
 	}
-	input:focus-visible,
-	select:focus-visible,
-	button:focus-visible,
-	a:focus-visible {
-		outline: 3px solid var(--accent);
-		outline-offset: 3px;
-	}
 	@media (max-width: 1100px) {
 		.selection-footer {
 			display: block;
@@ -686,34 +556,11 @@
 	}
 	@media (max-width: 760px) {
 		.selection-panel {
-			padding: 20px;
-		}
-		.selected-elements {
-			grid-template-columns: repeat(2, minmax(0, 1fr));
-			gap: 10px;
+			padding: 16px;
 		}
 		.selected-element {
-			padding: 8px 14px 16px;
-		}
-		.element-symbol {
-			font-size: 48px;
-		}
-		.element-name {
-			font-size: 16px;
-		}
-		.element-category {
-			font-size: 12px;
-		}
-		.add-element-form {
-			grid-template-columns: minmax(0, 1fr) auto;
-			gap: 14px 12px;
-		}
-		.search-field {
-			grid-column: 1 / -1;
-		}
-		.add-button {
-			padding-left: 14px;
-			padding-right: 14px;
+			padding: 8px 10px;
+			gap: 8px;
 		}
 		.properties-heading {
 			display: block;
@@ -790,26 +637,19 @@
 		}
 	}
 	@media (max-width: 440px) {
-		.tool-header {
-			flex-direction: column;
-			gap: 16px;
-		}
 		.selection-heading {
-			align-items: flex-start;
+			flex-direction: column;
+			align-items: stretch;
+			gap: 8px;
 		}
 		.selection-heading h2 {
 			font-size: 18px;
 		}
+		.selection-actions {
+			justify-content: space-between;
+		}
 		.selection-count {
 			font-size: 12px;
-			white-space: nowrap;
-			padding-top: 4px;
-		}
-		.add-element-form {
-			grid-template-columns: minmax(0, 1fr);
-		}
-		.add-button {
-			width: 100%;
 		}
 		.comparison-table tr {
 			column-gap: 8px;

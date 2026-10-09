@@ -8,6 +8,7 @@
 		display = 'families',
 		temperature = 298.15,
 		onselect,
+		onadd,
 		onpreview,
 		onleave
 	}: {
@@ -17,6 +18,7 @@
 		display?: ElementDisplay;
 		temperature?: number;
 		onselect: (element: Element) => void;
+		onadd?: (element: Element, trigger: HTMLButtonElement) => void;
 		onpreview: (element: Element) => void;
 		onleave: () => void;
 	} = $props();
@@ -35,9 +37,21 @@
 	class:dimmed
 	class:unknown={presentation.unknown}
 	style={`--tile-color:${presentation.color};--tile-bg:${presentation.background}`}
-	aria-label={`${element.number}. ${element.name}, ${element.symbol}. ${metric}. ${selected ? 'View element details' : 'Lock element preview'}`}
+	aria-label={`${element.number}. ${element.name}, ${element.symbol}. ${metric}. ${selected ? 'View element details' : 'Lock element preview'}${onadd ? '. Right-click or Shift+Enter to add to molar mass' : ''}`}
 	aria-pressed={selected}
+	aria-keyshortcuts={onadd ? 'Shift+Enter' : undefined}
 	onclick={() => onselect(element)}
+	oncontextmenu={(event) => {
+		if (!onadd) return;
+		event.preventDefault();
+		onadd(element, event.currentTarget);
+	}}
+	onkeydown={(event) => {
+		if (onadd && event.key === 'Enter' && event.shiftKey) {
+			event.preventDefault();
+			onadd(element, event.currentTarget);
+		}
+	}}
 	onpointerenter={(event) => {
 		if (event.pointerType === 'mouse') onpreview(element);
 	}}
