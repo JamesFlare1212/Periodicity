@@ -39,6 +39,25 @@ export function orbitalNotation(orbital: Orbital): string {
 	return `${orbital.n}${orbital.subshell}${orbital.electrons}`;
 }
 
+/** Compare occupancies by orbital identity, treating absent orbitals as empty. */
+export function getDifferingOrbitals(results: ConfigurationResult[]): Set<string> {
+	const occupancies = results
+		.filter((result) => result.status === 'available')
+		.map(
+			(result) =>
+				new Map(
+					result.orbitals.map((orbital) => [`${orbital.n}${orbital.subshell}`, orbital.electrons])
+				)
+		);
+	const differences = new Set<string>();
+	if (occupancies.length < 2) return differences;
+	for (const key of new Set(occupancies.flatMap((occupancy) => [...occupancy.keys()]))) {
+		const first = occupancies[0].get(key) ?? 0;
+		if (occupancies.some((occupancy) => (occupancy.get(key) ?? 0) !== first)) differences.add(key);
+	}
+	return differences;
+}
+
 /** Expand recorded cores, without assigning new occupancies or reordering the source. */
 export function expandElectronConfiguration(
 	configuration: string,

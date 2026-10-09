@@ -3,6 +3,7 @@ import { elements, getElement } from '#lib/data/elements.js';
 import {
 	configurationText,
 	expandElectronConfiguration,
+	getDifferingOrbitals,
 	getElectronConfiguration,
 	normalizeConfigurationView
 } from './electron-configuration';
@@ -97,5 +98,45 @@ describe('full electron configurations', () => {
 			expect(normalizeConfigurationView(view)).toBe(view);
 		expect(normalizeConfigurationView(null)).toBe('full');
 		expect(normalizeConfigurationView('invalid')).toBe('full');
+	});
+});
+
+describe('electron configuration differences', () => {
+	const configurations = (...symbols: string[]) =>
+		symbols.map((symbol) => getElectronConfiguration(getElement(symbol)!));
+
+	test('compares expanded cores and highlights changed and additional orbitals', () => {
+		expect(getDifferingOrbitals(configurations('C', 'Si'))).toEqual(new Set(['2p', '3s', '3p']));
+	});
+
+	test('compares occupancies instead of source order or core membership', () => {
+		expect(getDifferingOrbitals(configurations('Cu', 'Zn'))).toEqual(new Set(['4s']));
+		const iron = getElectronConfiguration(getElement('Fe')!);
+		if (iron.status !== 'available') throw new Error(iron.reason);
+		const reordered = {
+			...iron,
+			orbitals: [...iron.orbitals].reverse().map((orbital) => ({ ...orbital, core: !orbital.core }))
+		};
+		expect(getDifferingOrbitals([iron, reordered])).toEqual(new Set());
+	});
+
+	test('compares every selected element without depending on selection order', () => {
+		const expected = new Set(['2p', '3s', '3p']);
+		expect(getDifferingOrbitals(configurations('C', 'N', 'Si'))).toEqual(expected);
+		expect(getDifferingOrbitals(configurations('Si', 'N', 'C'))).toEqual(expected);
+	});
+
+	test('requires two available configurations and excludes unavailable data', () => {
+		const unavailable = getElectronConfiguration({
+			number: 2,
+			electronConfiguration: '1s1',
+			shells: [2]
+		});
+		expect(getDifferingOrbitals([])).toEqual(new Set());
+		expect(getDifferingOrbitals(configurations('C'))).toEqual(new Set());
+		expect(getDifferingOrbitals([...configurations('C'), unavailable])).toEqual(new Set());
+		expect(getDifferingOrbitals([...configurations('C', 'N'), unavailable])).toEqual(
+			new Set(['2p'])
+		);
 	});
 });

@@ -3,8 +3,14 @@
 	import { browser } from '$app/env';
 	import { page } from '$app/state';
 	import { tick } from 'svelte';
+	import ElectronConfiguration from '#lib/components/ElectronConfiguration.svelte';
 	import Icon from '#lib/components/Icon.svelte';
 	import PeriodicTablePicker from '#lib/components/PeriodicTablePicker.svelte';
+	import {
+		getDifferingOrbitals,
+		getElectronConfiguration,
+		orbitalNotation
+	} from '#lib/chemistry/electron-configuration.js';
 	import { categories, getElement, type Element } from '#lib/data/elements.js';
 
 	let pending = $state(false);
@@ -28,6 +34,15 @@
 	const selected = $derived(
 		readSelection(browser ? effectiveUrl.searchParams.get('elements') : null)
 	);
+	const configurations = $derived(
+		new Map(selected.map((element) => [element.number, getElectronConfiguration(element)]))
+	);
+	const differingOrbitals = $derived(getDifferingOrbitals([...configurations.values()]));
+
+	function fullConfiguration(element: Element) {
+		const result = configurations.get(element.number);
+		return result?.status === 'available' ? result.full : 'Not available';
+	}
 
 	function categoryLabel(category: string) {
 		return categories.find((item) => item.id === category)?.label ?? category;
@@ -44,7 +59,11 @@
 
 	const sections: {
 		title: string;
-		rows: { label: string; value: (element: Element) => string }[];
+		rows: {
+			label: string;
+			value: (element: Element) => string;
+			format?: 'electron-configuration';
+		}[];
 	}[] = [
 		{
 			title: 'At a glance',
@@ -61,8 +80,9 @@
 			title: 'Atomic structure',
 			rows: [
 				{
-					label: 'Electron configuration',
-					value: (element) => element.electronConfiguration || 'Not available'
+					label: 'Full electron configuration',
+					format: 'electron-configuration',
+					value: fullConfiguration
 				},
 				{
 					label: 'Electrons per shell',
@@ -265,7 +285,28 @@
 												class="mobile-element-label"
 												style={`color: var(--category-${element.category})`}>{element.symbol}</span
 											>
-											<span>{row.value(element)}</span>
+											<span class:full-configuration={row.format === 'electron-configuration'}>
+												{#if row.format === 'electron-configuration'}
+													{@const result = configurations.get(element.number)}
+													{#if result?.status === 'available'}
+														{#each result.orbitals as orbital (`${orbital.n}${orbital.subshell}`)}
+															{@const different = differingOrbitals.has(
+																`${orbital.n}${orbital.subshell}`
+															)}
+															<span class="configuration-orbital" class:different>
+																<ElectronConfiguration configuration={orbitalNotation(orbital)} />
+																{#if different}<span class="sr-only"
+																		>Differs across selected elements.</span
+																	>{/if}
+															</span>{' '}
+														{/each}
+													{:else}
+														Not available
+													{/if}
+												{:else}
+													{row.value(element)}
+												{/if}
+											</span>
 										</td>
 									{/each}
 								</tr>
@@ -497,6 +538,20 @@
 	}
 	.property-row td {
 		font-variant-numeric: tabular-nums;
+	}
+	.full-configuration {
+		line-height: 2;
+	}
+	.configuration-orbital {
+		display: inline-block;
+		padding: 0 3px;
+		border-radius: 4px;
+		white-space: nowrap;
+	}
+	.configuration-orbital.different {
+		color: var(--accent);
+		background: var(--accent-soft);
+		font-weight: 600;
 	}
 	.property-row:hover {
 		background: var(--surface-raised);
