@@ -19,6 +19,7 @@
 		minus: 'M5 12h14',
 		close: 'm6 6 12 12M6 18 18 6',
 		check: 'm5 12 4 4L19 6',
+		copy: 'M8 8h12v12H8ZM16 8V4H4v12h4',
 		external: 'M15 3h6v6m0-6L10 14M10 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-5',
 		info: 'M12 11v6m0-10v.01M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0',
 		temperature: 'M9 15.5V5a3 3 0 0 1 6 0v10.5a5 5 0 1 1-6 0ZM12 10v9',

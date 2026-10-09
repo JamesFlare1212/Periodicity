@@ -1,6 +1,13 @@
 <script lang="ts">
 	import Atom from '#lib/components/Atom.svelte';
-	import ElectronConfiguration from '#lib/components/ElectronConfiguration.svelte';
+	import ElectronConfigurationViewer from '#lib/components/ElectronConfigurationViewer.svelte';
+	import {
+		normalizeConfigurationView,
+		type ConfigurationView
+	} from '#lib/chemistry/electron-configuration.js';
+	import { page } from '$app/state';
+	import { browser } from '$app/env';
+	import { goto } from '$app/navigation';
 	import Icon from '#lib/components/Icon.svelte';
 	import TrendChart from '#lib/components/TrendChart.svelte';
 	import { categories, getElement, trendDefinitions, type TrendId } from '#lib/data/elements.js';
@@ -13,6 +20,22 @@
 	let next = $derived(getElement(element.number + 1));
 	let selectedTrend = $state<TrendId>('ionizationEnergy');
 	let availableTrends = $derived(trendDefinitions.filter((item) => item.id !== 'atomicMass'));
+	let effectiveUrl = $derived(page.shallow?.url ?? page.url);
+	let configurationView = $state<ConfigurationView>('full');
+	$effect(() => {
+		if (!browser) return;
+		configurationView = normalizeConfigurationView(effectiveUrl.searchParams.get('configuration'));
+	});
+
+	function changeConfigurationView(view: ConfigurationView) {
+		configurationView = view;
+		const url = new URL(effectiveUrl.href);
+		url.searchParams.set('configuration', view);
+		void goto(url, { shallow: true, replace: true, reset: false });
+	}
+	function neighborHref(number: number) {
+		return `/element/${number}/${configurationView === 'full' ? '' : `?configuration=${configurationView}`}`;
+	}
 
 	function number(value: number | null | undefined, unit = '') {
 		if (value === null || value === undefined || !Number.isFinite(value)) return 'Not available';
@@ -123,10 +146,11 @@
 		<section class="panel electron-panel" aria-labelledby="electronic-heading">
 			<h2 id="electronic-heading">Inside the atom</h2>
 			<p class="panel-description">Electron arrangement and the energy behind its behavior.</p>
-			<div class="configuration">
-				<span>Electron configuration</span>
-				<strong><ElectronConfiguration configuration={element.electronConfiguration} /></strong>
-			</div>
+			<ElectronConfigurationViewer
+				{element}
+				view={configurationView}
+				onviewchange={changeConfigurationView}
+			/>
 			<dl class="electronic-properties">
 				<div>
 					<dt>Electronegativity</dt>
@@ -208,7 +232,7 @@
 
 	<nav class="neighbor-nav" aria-label="Browse neighboring elements">
 		{#if previous}
-			<a href={`/element/${previous.number}/`} class="neighbor previous"
+			<a href={neighborHref(previous.number)} class="neighbor previous"
 				><Icon name="arrow-left" size={20} /><span
 					class="neighbor-symbol"
 					style={`color: var(--category-${previous.category})`}>{previous.symbol}</span
@@ -218,7 +242,7 @@
 			>
 		{:else}<div class="neighbor-placeholder"></div>{/if}
 		{#if next}
-			<a href={`/element/${next.number}/`} class="neighbor next"
+			<a href={neighborHref(next.number)} class="neighbor next"
 				><span class="neighbor-number">{next.number}</span><span
 					><small>Next element</small><strong>{next.name}</strong></span
 				><span class="neighbor-symbol" style={`color: var(--category-${next.category})`}
@@ -437,24 +461,6 @@
 		font-size: 13px;
 		line-height: 1.7;
 		margin: 9px 0 24px;
-	}
-	.configuration {
-		background: var(--surface-raised);
-		padding: 18px 20px;
-		border-radius: 8px;
-	}
-	.configuration > span {
-		display: block;
-		color: var(--muted);
-		font-size: 12px;
-		margin-bottom: 10px;
-	}
-	.configuration strong {
-		font-family: var(--font-display);
-		font-size: 20px;
-		line-height: 1.6;
-		font-weight: 500;
-		overflow-wrap: anywhere;
 	}
 	.electronic-properties {
 		display: grid;
@@ -741,12 +747,6 @@
 		.detail-columns {
 			gap: 20px;
 			margin: 25px 0;
-		}
-		.configuration {
-			padding: 16px;
-		}
-		.configuration strong {
-			font-size: 18px;
 		}
 		.electronic-properties {
 			gap: 23px 16px;

@@ -7,8 +7,14 @@
 	let {
 		element,
 		display = 'families',
-		temperature = 298.15
-	}: { element: Element; display?: ElementDisplay; temperature?: number } = $props();
+		temperature = 298.15,
+		onconfiguration
+	}: {
+		element: Element;
+		display?: ElementDisplay;
+		temperature?: number;
+		onconfiguration?: (element: Element) => void;
+	} = $props();
 	let category = $derived(categoryById[element.category]);
 	let phase = $derived(getPhaseAtTemperature(element, temperature));
 	let presentation = $derived(getElementDisplay(element, display, temperature));
@@ -53,9 +59,19 @@
 				<span><b class="phase">{phase}</b>State at {Math.round(temperature)} K</span>
 			{/if}
 		</div>
-		<a class="details-link" href={`/element/${element.number}/`}
-			>Explore {element.name.toLowerCase()}<Icon name="arrow-right" size={16} /></a
-		>
+		<div class="preview-actions">
+			{#if onconfiguration}
+				<button
+					type="button"
+					class="configuration-link"
+					onclick={() => onconfiguration?.(element)}
+					aria-haspopup="dialog">Full configuration</button
+				>
+			{/if}
+			<a class="details-link" href={`/element/${element.number}/`}
+				>Explore {element.name.toLowerCase()}<Icon name="arrow-right" size={16} /></a
+			>
+		</div>
 	</div>
 	<div class="preview-atom">
 		<Atom {element} compact color={presentation.color} background={presentation.background} />
@@ -165,6 +181,25 @@
 	}
 	.phase {
 		text-transform: capitalize;
+	}
+	.preview-actions {
+		display: flex;
+		align-items: center;
+		flex-wrap: wrap;
+		gap: 0 20px;
+	}
+	.configuration-link {
+		min-height: 44px;
+		padding: 0;
+		border: 0;
+		border-radius: 4px;
+		background: transparent;
+		color: var(--element-color);
+		font-size: 12px;
+	}
+	.configuration-link:hover {
+		text-decoration: underline;
+		text-underline-offset: 4px;
 	}
 	.details-link {
 		display: inline-flex;

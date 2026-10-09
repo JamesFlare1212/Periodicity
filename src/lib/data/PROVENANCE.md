@@ -11,6 +11,12 @@ Family membership follows the explicit lists in the original UI, including polon
 
 The source’s 19 unrecorded heavy-element standard states remain `unknown`. The second dataset’s predicted solid/gas states are retained in the raw data but are not presented as established measurements.
 
+## Electron configurations
+
+Full configurations expand the noble-gas cores in the recorded shorthand recursively, retaining the source's orbital order and occupancy numbers. The expansion validates orbital capacity and electron totals without reassigning electrons using a filling algorithm. “By shell” derives counts from that same configuration rather than from the independently sourced shell diagram.
+
+Two historical records disagree across these sources: Ds gives `2, 8, 18, 32, 32, 17, 1` from its configuration versus `2, 8, 18, 32, 32, 16, 2` in the diagram; Rg gives `2, 8, 18, 32, 32, 18, 1` versus `2, 8, 18, 32, 32, 17, 2`. Their By shell view explains the differing references. Both original records remain preserved; expansion does not establish which occupancy is scientifically preferred.
+
 ## Electron affinity
 
 The raw numerical dataset uses the electron-attachment enthalpy sign convention: for example, chlorine is recorded as −349 kJ/mol. The application converts those signs to electron affinity as energy released on electron attachment, following the [IUPAC definition](https://goldbook.iupac.org/terms/view/E01977/1000). It negates nonzero source values, so chlorine is displayed as 349 kJ/mol and hydrogen as 73 kJ/mol. Raw records and numerical magnitudes are preserved.

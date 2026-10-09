@@ -16,6 +16,7 @@
 	} from '#lib/data/elements.js';
 	import ElementTile from '#lib/components/ElementTile.svelte';
 	import ElementPreview from '#lib/components/ElementPreview.svelte';
+	import ElectronConfigurationDialog from '#lib/components/ElectronConfigurationDialog.svelte';
 	import MassAddition from '#lib/components/MassAddition.svelte';
 	import Icon from '#lib/components/Icon.svelte';
 	import { calculateElementSelection } from '#lib/chemistry/element-selection.js';
@@ -25,6 +26,7 @@
 	let temperature = $state(298);
 	let selected = $state<Element | null>(null);
 	let hovered = $state<Element | null>(null);
+	let configurationElement = $state<Element | null>(null);
 	let mobileView = $state<'grid' | 'table'>('grid');
 	let massSelection = $state<Element[]>([]);
 	let massAddButton: HTMLButtonElement;
@@ -78,6 +80,12 @@
 		}
 		selected = element;
 		hovered = null;
+		update({ element: String(element.number) });
+	}
+	function openConfiguration(element: Element) {
+		selected = element;
+		hovered = null;
+		configurationElement = element;
 		update({ element: String(element.number) });
 	}
 	function filterFamily(id: CategoryId) {
@@ -141,6 +149,7 @@
 
 <svelte:window
 	onkeydown={(event) => {
+		if (configurationElement) return;
 		if (!event.defaultPrevented && event.key === 'Escape' && massSelection.length > 0) {
 			event.preventDefault();
 			void closeMass();
@@ -256,7 +265,12 @@
 				onclose={closeMass}
 			/>
 		{:else}
-			<ElementPreview element={preview} {display} {temperature} />
+			<ElementPreview
+				element={preview}
+				{display}
+				{temperature}
+				onconfiguration={openConfiguration}
+			/>
 		{/if}
 	</div>
 	<div class="table-caption">
@@ -305,7 +319,12 @@
 						onclose={closeMass}
 					/>
 				{:else}
-					<ElementPreview element={preview} {display} {temperature} />
+					<ElementPreview
+						element={preview}
+						{display}
+						{temperature}
+						onconfiguration={openConfiguration}
+					/>
 				{/if}
 			</div>
 			{#each elements as element}<div
@@ -395,6 +414,13 @@
 		<a href="/trends/">Discover the patterns <Icon name="arrow-right" size={17} /></a>
 	</div>
 </div>
+
+{#if configurationElement}
+	<ElectronConfigurationDialog
+		element={configurationElement}
+		onclose={() => (configurationElement = null)}
+	/>
+{/if}
 
 <style>
 	.explore-page {
