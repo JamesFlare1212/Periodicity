@@ -37,7 +37,7 @@
 <header class="site-header">
 	<div class="header-inner">
 		<a class="brand" href="/" aria-label="Periodicity home"
-			><span class="brand-mark"><Icon name="atom" size={28} /></span><span
+			><img class="brand-mark" src="/favicon.ico" width="28" height="28" alt="" /><span
 				>periodicity<span class="brand-dot">.</span></span
 			></a
 		>
@@ -110,8 +110,8 @@
 		letter-spacing: -0.055em;
 	}
 	.brand-mark {
-		color: var(--accent);
-		display: flex;
+		display: block;
+		flex-shrink: 0;
 	}
 	.brand-dot {
 		color: var(--accent);
