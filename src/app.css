@@ -1,0 +1,294 @@
+@import '@fontsource-variable/dm-sans';
+@import '@fontsource-variable/space-grotesk';
+
+:root {
+	font-family: 'DM Sans Variable', sans-serif;
+	color-scheme: dark;
+	--bg: #10151e;
+	--surface: #171e29;
+	--surface-raised: #202a36;
+	--text: #e9edf3;
+	--muted: #a1adbd;
+	--accent: #9de1c6;
+	--accent-soft: #1c3a33;
+	--on-accent: #102b22;
+	--border: #2c3644;
+	--danger: #ffb0b7;
+	--category-alkali-metal: #eeb2ad;
+	--category-alkali-metal-bg: #362529;
+	--category-alkaline-earth-metal: #e5c397;
+	--category-alkaline-earth-metal-bg: #342e26;
+	--category-transition-metal: #b4b9ed;
+	--category-transition-metal-bg: #2b2d42;
+	--category-post-transition-metal: #97c9df;
+	--category-post-transition-metal-bg: #233441;
+	--category-metalloid: #a4d1b6;
+	--category-metalloid-bg: #233b32;
+	--category-nonmetal: #bcdc91;
+	--category-nonmetal-bg: #2b3826;
+	--category-halogen: #e4d789;
+	--category-halogen-bg: #3a3523;
+	--category-noble-gas: #cfb0dd;
+	--category-noble-gas-bg: #34283e;
+	--category-lanthanide: #dcb0cc;
+	--category-lanthanide-bg: #382b36;
+	--category-actinide: #a0c8c5;
+	--category-actinide-bg: #253738;
+	--category-unknown: #bdc3cb;
+	--category-unknown-bg: #2a3038;
+	--phase-solid: #b4b9ed;
+	--phase-liquid: #97d8ed;
+	--phase-gas: #e9c794;
+	--phase-unknown: #bdc3cb;
+	--focus: #a8dfff;
+	--trend-electronegativity: #e4d789;
+	--trend-atomic-radius: #97c9df;
+	--trend-ionization-energy: #eeb2ad;
+	--trend-electron-affinity: #a4d1b6;
+	--trend-density: #cfb0dd;
+	--trend-melting-point: #e5c397;
+	--trend-atomic-mass: #9de1c6;
+	--radius: 12px;
+	--motion-fast: 140ms;
+	--motion-normal: 220ms;
+	--font-display: 'Space Grotesk Variable', sans-serif;
+}
+:root[data-theme='light'] {
+	color-scheme: light;
+	--bg: #f5f7fa;
+	--surface: #ffffff;
+	--surface-raised: #edf1f5;
+	--text: #1c2938;
+	--muted: #526172;
+	--accent: #216b52;
+	--accent-soft: #e0f1e9;
+	--on-accent: #ffffff;
+	--border: #d2dbe5;
+	--danger: #b82e45;
+	--category-alkali-metal: #94433f;
+	--category-alkali-metal-bg: #f7e4e1;
+	--category-alkaline-earth-metal: #855a25;
+	--category-alkaline-earth-metal-bg: #f7eddd;
+	--category-transition-metal: #5758a1;
+	--category-transition-metal-bg: #e9e9f9;
+	--category-post-transition-metal: #326883;
+	--category-post-transition-metal-bg: #e0eff7;
+	--category-metalloid: #386b4a;
+	--category-metalloid-bg: #e4f1e7;
+	--category-nonmetal: #4b6c2d;
+	--category-nonmetal-bg: #eaf2de;
+	--category-halogen: #796021;
+	--category-halogen-bg: #f5f0d8;
+	--category-noble-gas: #7c4f92;
+	--category-noble-gas-bg: #f0e6f5;
+	--category-lanthanide: #884d72;
+	--category-lanthanide-bg: #f4e5ef;
+	--category-actinide: #366d69;
+	--category-actinide-bg: #e1efee;
+	--category-unknown: #526172;
+	--category-unknown-bg: #e9edf1;
+	--phase-solid: #5758a1;
+	--phase-liquid: #216c83;
+	--phase-gas: #855a25;
+	--phase-unknown: #526172;
+	--focus: #166caa;
+	--trend-electronegativity: #796021;
+	--trend-atomic-radius: #326883;
+	--trend-ionization-energy: #94433f;
+	--trend-electron-affinity: #386b4a;
+	--trend-density: #7c4f92;
+	--trend-melting-point: #855a25;
+	--trend-atomic-mass: #216b52;
+}
+* {
+	box-sizing: border-box;
+}
+html {
+	background: var(--bg);
+	scroll-padding-top: 100px;
+}
+body {
+	margin: 0;
+	color: var(--text);
+	font-size: 16px;
+	line-height: 1.5;
+	-webkit-font-smoothing: antialiased;
+}
+button,
+input,
+select,
+textarea {
+	font: inherit;
+}
+button,
+a,
+input,
+select {
+	-webkit-tap-highlight-color: transparent;
+	touch-action: manipulation;
+}
+button {
+	cursor: pointer;
+}
+button:disabled {
+	cursor: not-allowed;
+	opacity: 0.5;
+}
+a {
+	color: inherit;
+	text-decoration: none;
+}
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible {
+	outline: 3px solid var(--focus);
+	outline-offset: 4px;
+}
+::selection {
+	background: var(--accent-soft);
+	color: var(--accent);
+}
+h1,
+h2,
+h3,
+p {
+	margin: 0;
+}
+h1,
+h2,
+h3 {
+	font-family: var(--font-display);
+	font-weight: 500;
+	line-height: 1.2;
+	text-wrap: balance;
+}
+svg {
+	flex-shrink: 0;
+}
+input,
+select,
+textarea {
+	color: var(--text);
+	background: var(--surface);
+	border: 1px solid var(--border);
+	border-radius: 8px;
+	min-height: 44px;
+	padding: 10px 12px;
+}
+input::placeholder {
+	color: var(--muted);
+	opacity: 0.9;
+}
+select {
+	cursor: pointer;
+}
+button {
+	color: inherit;
+}
+.page-shell {
+	max-width: 1480px;
+	margin: 0 auto;
+	padding: 40px 44px 56px;
+}
+.page-heading {
+	font-size: clamp(30px, 3.1vw, 44px);
+	letter-spacing: -0.045em;
+}
+.text-muted {
+	color: var(--muted);
+}
+.button {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+	min-height: 44px;
+	padding: 10px 16px;
+	background: var(--surface-raised);
+	color: var(--text);
+	border: 1px solid var(--border);
+	border-radius: 8px;
+	font-size: 14px;
+	font-weight: 500;
+	transition:
+		background var(--motion-fast),
+		border-color var(--motion-fast);
+}
+.button:hover {
+	border-color: var(--muted);
+}
+.button-primary {
+	background: var(--accent);
+	border-color: var(--accent);
+	color: var(--on-accent);
+}
+.button-primary:hover {
+	filter: brightness(1.07);
+	border-color: var(--accent);
+}
+.icon-button {
+	display: inline-flex;
+	justify-content: center;
+	align-items: center;
+	width: 44px;
+	min-height: 44px;
+	border: 1px solid var(--border);
+	border-radius: 8px;
+	background: transparent;
+}
+.icon-button:hover {
+	background: var(--surface-raised);
+}
+.panel {
+	background: var(--surface);
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+}
+.sr-only {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	padding: 0;
+	margin: -1px;
+	overflow: hidden;
+	clip: rect(0, 0, 0, 0);
+	white-space: nowrap;
+	border: 0;
+}
+.skip-link {
+	position: fixed;
+	top: 8px;
+	left: 8px;
+	z-index: 100;
+	padding: 12px 20px;
+	background: var(--accent);
+	color: var(--on-accent);
+	border-radius: 8px;
+	transform: translateY(-160%);
+}
+.skip-link:focus {
+	transform: translateY(0);
+}
+@media (max-width: 1000px) {
+	.page-shell {
+		padding: 32px 24px 40px;
+	}
+}
+@media (max-width: 600px) {
+	.page-shell {
+		padding: 28px 16px 36px;
+	}
+}
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		animation-duration: 0.01ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0.01ms !important;
+		scroll-behavior: auto !important;
+	}
+}
