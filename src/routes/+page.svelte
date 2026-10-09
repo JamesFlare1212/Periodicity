@@ -273,25 +273,25 @@
 			/>
 		{/if}
 	</div>
-	<div class="table-caption">
-		<span
-			>{#if category}<b>{matches.length}</b> of 118 elements in {categories
-					.find((item) => item.id === category)
-					?.label.toLowerCase()}{/if}</span
-		><span class="table-caption-right" class:affinity={display === 'electronAffinity'}
-			>{#if isTrend && trend}{trend.label}
-				<span
-					class="heatmap-key"
-					style={`--heatmap-color:${display === 'electronAffinity' ? trend.color : 'var(--accent)'}`}
-				>
-					{#if display === 'electronAffinity'}0{/if}<i aria-hidden="true"></i>
-					{display === 'electronAffinity' ? 'More energy released' : 'Low to high'}
-				</span>
-			{:else}<span class="key-hint"
-					><kbd>↑</kbd><kbd>↓</kbd><kbd>←</kbd><kbd>→</kbd> to explore</span
-				>{/if}</span
-		>
-	</div>
+	{#if category || (isTrend && trend)}
+		<div class="table-caption" class:trend-only={!category}>
+			<span
+				>{#if category}<b>{matches.length}</b> of 118 elements in {categories
+						.find((item) => item.id === category)
+						?.label.toLowerCase()}{/if}</span
+			><span class="table-caption-right" class:affinity={display === 'electronAffinity'}
+				>{#if isTrend && trend}{trend.label}
+					<span
+						class="heatmap-key"
+						style={`--heatmap-color:${display === 'electronAffinity' ? trend.color : 'var(--accent)'}`}
+					>
+						{#if display === 'electronAffinity'}0{/if}<i aria-hidden="true"></i>
+						{display === 'electronAffinity' ? 'More energy released' : 'Low to high'}
+					</span>
+				{/if}</span
+			>
+		</div>
+	{/if}
 	<!-- svelte-ignore a11y_no_noninteractive_tabindex (The labeled table scroll region supports keyboard scrolling.) -->
 	<div
 		class="table-scroll"
@@ -463,10 +463,6 @@
 		padding-bottom: 16px;
 		border-bottom: 1px solid var(--border);
 	}
-	kbd {
-		font-family: inherit;
-		font-size: 11px;
-	}
 	.toolbar-controls {
 		display: flex;
 		gap: 12px;
@@ -590,10 +586,15 @@
 		flex-wrap: wrap;
 		justify-content: space-between;
 		gap: 16px;
-		margin: 20px 0 8px;
+		margin: 16px 0 8px;
 		color: var(--muted);
 		font-size: 11px;
-		min-height: 20px;
+	}
+	.table-scroll {
+		margin-top: 16px;
+	}
+	.table-caption + .table-scroll {
+		margin-top: 0;
 	}
 	.table-caption b {
 		color: var(--text);
@@ -603,17 +604,6 @@
 		display: flex;
 		align-items: center;
 		gap: 12px;
-	}
-	.key-hint {
-		display: flex;
-		align-items: center;
-		gap: 4px;
-	}
-	.key-hint kbd {
-		color: var(--text);
-	}
-	.key-hint kbd:last-of-type {
-		margin-right: 5px;
 	}
 	.heatmap-key {
 		display: flex;
@@ -941,7 +931,12 @@
 		}
 		.table-caption {
 			font-size: 11px;
-			margin-top: 20px;
+		}
+		.table-caption.trend-only {
+			display: none;
+		}
+		.table-caption.trend-only + .table-scroll {
+			margin-top: 16px;
 		}
 		.table-caption-right,
 		.table-caption-right.affinity {
