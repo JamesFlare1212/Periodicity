@@ -16,10 +16,45 @@
 
 	let table: HTMLDivElement;
 	let focusedNumber = $state(1);
+	let mobileView = $state<'grid' | 'table'>('grid');
 	const selectedNumbers = $derived(new Set(selected.map((element) => element.number)));
 	const full = $derived(selected.length >= limit);
 
 	function arrowNavigate(event: KeyboardEvent, element: Element) {
+		if (getComputedStyle(table).getPropertyValue('--picker-layout').trim() === 'grid') {
+			const columns = getComputedStyle(table).gridTemplateColumns.split(' ').length;
+			const index = elements.findIndex((item) => item.number === element.number);
+			const rowStart = Math.floor(index / columns) * columns;
+			const rowEnd = Math.min(rowStart + columns - 1, elements.length - 1);
+			let nextIndex = index;
+			switch (event.key) {
+				case 'ArrowRight':
+					nextIndex = Math.min(index + 1, rowEnd);
+					break;
+				case 'ArrowLeft':
+					nextIndex = Math.max(index - 1, rowStart);
+					break;
+				case 'ArrowDown':
+					if (index + columns < elements.length) nextIndex = index + columns;
+					break;
+				case 'ArrowUp':
+					if (index >= columns) nextIndex = index - columns;
+					break;
+				case 'Home':
+					nextIndex = event.ctrlKey ? 0 : rowStart;
+					break;
+				case 'End':
+					nextIndex = event.ctrlKey ? elements.length - 1 : rowEnd;
+					break;
+				default:
+					return;
+			}
+			event.preventDefault();
+			table
+				.querySelector<HTMLButtonElement>(`[data-element="${elements[nextIndex].number}"]`)
+				?.focus();
+			return;
+		}
 		let next: Element | undefined;
 		switch (event.key) {
 			case 'ArrowRight':
@@ -59,12 +94,38 @@
 </script>
 
 <div class="periodic-picker" aria-busy={pending}>
-	<p class="scroll-hint"><Icon name="arrow-right" size={15} /> Scroll to see all groups</p>
+	<div class="mobile-toolbar">
+		{#if selected.length > 0}
+			<a href="#properties-heading">View comparison<Icon name="chevron-down" size={16} /></a>
+		{:else}
+			<span>Choose up to {limit} elements.</span>
+		{/if}
+		<div class="mobile-view" role="group" aria-label="Element layout">
+			<button
+				type="button"
+				class:active={mobileView === 'grid'}
+				aria-label="Grid view"
+				aria-pressed={mobileView === 'grid'}
+				onclick={() => (mobileView = 'grid')}><Icon name="grid" size={17} /></button
+			>
+			<button
+				type="button"
+				class:active={mobileView === 'table'}
+				aria-label="Periodic table view"
+				aria-pressed={mobileView === 'table'}
+				onclick={() => (mobileView = 'table')}><Icon name="table" size={17} /></button
+			>
+		</div>
+	</div>
+	<p class="scroll-hint" class:mobile-table={mobileView === 'table'}>
+		<Icon name="arrow-right" size={15} /> Scroll to see all groups
+	</p>
 	<!-- svelte-ignore a11y_no_noninteractive_tabindex (The labeled region supports keyboard scrolling.) -->
 	<div
 		class="table-scroll"
+		class:mobile-table={mobileView === 'table'}
 		role="region"
-		aria-label="Periodic table element selection, horizontally scrollable on small screens"
+		aria-label="Periodic table element selection"
 		tabindex="0"
 	>
 		<div class="periodic-grid" bind:this={table}>
@@ -131,6 +192,7 @@
 		border-radius: 5px;
 	}
 	.periodic-grid {
+		--picker-layout: table;
 		--cell: clamp(60px, 5vw, 70px);
 		display: grid;
 		grid-template-columns: 14px repeat(18, minmax(0, 1fr));
@@ -288,6 +350,9 @@
 	.scroll-hint {
 		display: none;
 	}
+	.mobile-toolbar {
+		display: none;
+	}
 	@media (max-width: 1100px) {
 		.scroll-hint {
 			display: flex;
@@ -296,6 +361,94 @@
 			margin-bottom: 12px;
 			color: var(--muted);
 			font-size: 12px;
+		}
+	}
+	@media (max-width: 1000px) {
+		.mobile-toolbar {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 12px;
+			margin-bottom: 16px;
+			color: var(--muted);
+			font-size: 12px;
+		}
+		.mobile-toolbar > a {
+			display: inline-flex;
+			align-items: center;
+			gap: 6px;
+			min-height: 44px;
+			color: var(--accent);
+		}
+		.mobile-view {
+			display: flex;
+			flex-shrink: 0;
+			padding: 2px;
+			border: 1px solid var(--border);
+			border-radius: 7px;
+		}
+		.mobile-view button {
+			display: grid;
+			place-items: center;
+			width: 44px;
+			height: 44px;
+			border: 0;
+			border-radius: 4px;
+			background: transparent;
+			color: var(--muted);
+		}
+		.mobile-view button.active {
+			background: var(--accent-soft);
+			color: var(--accent);
+		}
+		.scroll-hint:not(.mobile-table) {
+			display: none;
+		}
+		.periodic-grid {
+			--cell: 83px;
+			width: 1120px;
+			gap: 5px;
+		}
+		.table-scroll.mobile-table {
+			padding-bottom: 12px;
+			scrollbar-color: var(--border) var(--surface);
+		}
+		.table-scroll:not(.mobile-table) .periodic-grid {
+			--picker-layout: grid;
+			width: auto;
+			min-width: 0;
+			grid-template-columns: repeat(6, minmax(0, 1fr));
+			grid-template-rows: none;
+			grid-auto-rows: 91px;
+			gap: 7px;
+		}
+		.table-scroll:not(.mobile-table) .element-tile {
+			grid-column: auto !important;
+			grid-row: auto !important;
+		}
+		.table-scroll:not(.mobile-table) .group-label,
+		.table-scroll:not(.mobile-table) .period-label,
+		.table-scroll:not(.mobile-table) .table-help,
+		.table-scroll:not(.mobile-table) .f-block-placeholder,
+		.table-scroll:not(.mobile-table) .f-block-label {
+			display: none;
+		}
+		.element-name {
+			font-size: 10px;
+		}
+	}
+	@media (max-width: 760px) {
+		.element-symbol {
+			font-size: 28px;
+		}
+		.element-name,
+		.atomic-number {
+			font-size: 11px;
+		}
+	}
+	@media (max-width: 600px) {
+		.table-scroll:not(.mobile-table) .periodic-grid {
+			grid-template-columns: repeat(4, minmax(0, 1fr));
 		}
 	}
 </style>
