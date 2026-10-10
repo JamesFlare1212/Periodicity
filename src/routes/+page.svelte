@@ -272,7 +272,7 @@
 				>{/each}</select
 		>
 	</div>
-	<div class="mobile-preview panel">
+	<div class="mobile-preview panel" class:mass-active={massResult !== null}>
 		{#if massResult}
 			<MassAddition
 				selection={massSelection}
@@ -437,7 +437,7 @@
 
 <style>
 	.explore-page {
-		--preview-height: 240px;
+		--mass-preview-height: 240px;
 		padding-top: 34px;
 		padding-bottom: 30px;
 	}
@@ -871,6 +871,9 @@
 			flex: none;
 			margin-left: 0;
 		}
+		.temperature-panel.inactive {
+			display: none;
+		}
 		.toolbar-controls {
 			width: 100%;
 			gap: 8px;
@@ -910,8 +913,9 @@
 		.mobile-preview {
 			display: block;
 			margin-top: 16px;
-			height: var(--preview-height);
-			min-height: 0;
+		}
+		.mobile-preview.mass-active {
+			height: var(--mass-preview-height);
 		}
 		.mobile-preview :global(.mass-addition) {
 			border: 0;
@@ -998,24 +1002,29 @@
 
 	@media (max-width: 760px) {
 		.explore-page {
-			--preview-height: 340px;
+			--mass-preview-height: 340px;
 		}
 	}
 	@media (max-width: 360px) {
 		.explore-page {
-			--preview-height: 384px;
+			--mass-preview-height: 384px;
 		}
 	}
 
 	@media (max-width: 600px) {
 		.toolbar-controls {
-			flex-wrap: wrap;
+			display: grid;
+			grid-template-columns: minmax(0, 1fr) auto;
+			align-items: center;
 		}
 		.display-field {
-			flex-basis: 220px;
+			grid-column: 1 / -1;
+		}
+		.quick-mass-add {
+			width: 100%;
 		}
 		.mobile-view {
-			margin-left: auto;
+			margin-left: 0;
 		}
 		.temperature-panel {
 			grid-template-columns: minmax(0, 1fr);

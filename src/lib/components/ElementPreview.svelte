@@ -245,6 +245,12 @@
 			gap: 10px 12px;
 		}
 	}
+	@media (max-width: 1000px) {
+		.preview {
+			height: auto;
+			align-items: start;
+		}
+	}
 	@media (max-width: 760px) {
 		.preview {
 			padding: 18px;
@@ -252,8 +258,6 @@
 		}
 		.preview-name {
 			gap: 5px;
-			min-height: 52px;
-			align-content: start;
 		}
 		.preview-name h2 {
 			font-size: clamp(20px, 6vw, 24px);
@@ -264,8 +268,6 @@
 		}
 		.preview-properties {
 			gap: 10px 12px;
-			/* Reserve two rows when the active property joins the other facts. */
-			min-height: 79px;
 		}
 		.preview-properties > span {
 			font-size: 10px;
@@ -274,21 +276,11 @@
 			font-size: 11px;
 		}
 		.details-link {
-			min-height: 36px;
-		}
-		.preview-actions {
-			min-height: 80px;
-			align-content: start;
+			min-height: 44px;
 		}
 		.specimen {
 			align-self: start;
 			margin-top: 3px;
-		}
-	}
-	@media (max-width: 360px) {
-		.preview-properties {
-			/* Narrow screens can wrap all three facts onto separate rows. */
-			min-height: 123.5px;
 		}
 	}
 </style>
