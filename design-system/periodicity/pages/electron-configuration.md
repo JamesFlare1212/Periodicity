@@ -4,13 +4,13 @@
 
 首页增加 **Full configuration** 入口，点击后打开轻量弹层，保留周期表的位置和当前元素。元素详情页在现有 **Inside the atom** 面板内增加 **Short / Full / By shell** 三种视图，默认 Full。Compare 页后续增加整行统一的 Short / Full 切换。
 
-第一版已接入首页和元素详情页，提供三种视图、复制、键盘弹层和可分享的详情页视图参数。Compare 页继续作为第二阶段。
+首页和元素详情页已提供三种视图、复制、键盘弹层和可分享的详情页视图参数。Compare 页已展示完整排布，并高亮所选元素间占据数不同的轨道，附带可读的差异说明；整行统一的 Short / Full 切换仍是后续计划。
 
 交互原型：`../prototypes/electron-configuration.html`，保留为独立设计参考；应用使用共用 Svelte 查看器。
 
 ## 设计时的现状与依据
 
-- `ElementPreview.svelte` 和元素详情页均显示 `element.electronConfiguration`，目前只有简写，没有完整查看入口。
+- 设计前，`ElementPreview.svelte` 和元素详情页均只显示 `element.electronConfiguration` 简写，没有完整查看入口；当前已接入共用查看器。
 - `ElectronConfiguration.svelte` 已经将占据数显示为上标，可继续复用。
 - 首页预览占用周期表中部的固定空隙。长排布在这里直接展开会改变表格布局，因此使用弹层。
 - 原始数据全部 118 条均有电子排布。简写来自 properties，壳层数来自 general；两套历史数据需要分别校验，不能假设始终一致。
@@ -62,7 +62,7 @@ Full 视图保持源数据的轨道顺序。以 Fe 为例，显示 `1s² 2s² 2p
 | H、He      | Short 与 Full 相同，也保留一致的切换入口，不产生“按钮失效”的困惑                                           |
 | 缺失/无效  | 保留能展示的原始简写；Full / By shell 不可用并显示原因；不生成猜测的完整排布                               |
 
-详情页可用 `/element/26/?configuration=full#electronic-heading` 分享当前视图。首页弹层是临时查看状态，第一版不需要独立 URL。Compare 页若实现，应使用统一视图控制，并加入现有 URL 参数。
+详情页可用 `/element/26/?configuration=full#electronic-heading` 分享当前视图。首页弹层是临时查看状态，不需要独立 URL。Compare 当前展示完整排布与差异高亮；后续统一 Short / Full 切换应加入现有 URL 参数。
 
 ## 视觉与响应式
 
@@ -105,7 +105,7 @@ By shell 的数值从同一组展开后的轨道计算，保证展示内部一�
 
 ## 验收标准与实现顺序
 
-第一版实现首页入口与弹层、详情页查看器、递归展开、三种视图和复制。第二版再将完整排布加入 Compare 页。
+首页入口与弹层、详情页查看器、递归展开、三种视图和复制均已实现。Compare 已接入完整排布与轨道差异高亮；后续仍计划增加整行统一的 Short / Full 切换。
 
 - 验证全部 118 条电子总数、各轨道容量；核对派生壳层和已有壳层的差异。
 - 覆盖 H/He、嵌套核心、Cr/Cu、Au/U/Og、空值、未知核心、循环、非法片段与重复轨道。

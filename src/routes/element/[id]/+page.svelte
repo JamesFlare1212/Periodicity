@@ -1,30 +1,28 @@
 <script lang="ts">
 	import Atom from '#lib/components/Atom.svelte';
 	import ElectronConfigurationViewer from '#lib/components/ElectronConfigurationViewer.svelte';
-	import {
-		normalizeConfigurationView,
-		type ConfigurationView
-	} from '#lib/chemistry/electron-configuration.js';
+	import { type ConfigurationView } from '#lib/chemistry/electron-configuration.js';
 	import { page } from '$app/state';
 	import { browser } from '$app/env';
 	import { goto } from '$app/navigation';
 	import Icon from '#lib/components/Icon.svelte';
 	import TrendChart from '#lib/components/TrendChart.svelte';
-	import { categories, getElement, trendDefinitions, type TrendId } from '#lib/data/elements.js';
+	import { categoryById, getElement, availableTrends, type TrendId } from '#lib/data/elements.js';
 	import type { PageData } from './$types';
+	import { formatNumber } from '#lib/format.js';
+	import { VIEW_DEFAULTS, readElementView } from '#lib/view-state.js';
 
 	let { data }: { data: PageData } = $props();
 	let element = $derived(data.element);
-	let category = $derived(categories.find((item) => item.id === element.category));
+	let category = $derived(categoryById[element.category]);
 	let previous = $derived(getElement(element.number - 1));
 	let next = $derived(getElement(element.number + 1));
-	let selectedTrend = $state<TrendId>('ionizationEnergy');
-	let availableTrends = $derived(trendDefinitions.filter((item) => item.id !== 'atomicMass'));
+	let selectedTrend = $state<TrendId>(VIEW_DEFAULTS.trends.property);
 	let effectiveUrl = $derived(page.shallow?.url ?? page.url);
-	let configurationView = $state<ConfigurationView>('full');
+	let configurationView = $state<ConfigurationView>(VIEW_DEFAULTS.element.configuration);
 	$effect(() => {
 		if (!browser) return;
-		configurationView = normalizeConfigurationView(effectiveUrl.searchParams.get('configuration'));
+		configurationView = readElementView(effectiveUrl.searchParams).configuration;
 	});
 
 	function changeConfigurationView(view: ConfigurationView) {
@@ -38,9 +36,12 @@
 	}
 
 	function number(value: number | null | undefined, unit = '') {
-		if (value === null || value === undefined || !Number.isFinite(value)) return 'Not available';
-		const formatted = new Intl.NumberFormat('en', { maximumFractionDigits: 10 }).format(value);
-		return unit ? `${formatted} ${unit}` : formatted;
+		return formatNumber(value, {
+			locale: 'en',
+			maximumFractionDigits: 10,
+			missing: 'Not available',
+			unit
+		});
 	}
 
 	function text(value: string | number | null | undefined) {
@@ -309,7 +310,7 @@
 		font-variant-numeric: tabular-nums;
 	}
 	.specimen-top span:last-child {
-		font-family: 'DM Sans Variable', sans-serif;
+		font-family: var(--font-body);
 		font-size: 12px;
 	}
 	.element-symbol {
@@ -436,12 +437,12 @@
 	dd small {
 		display: block;
 		margin-top: 2px;
-		font-family: 'DM Sans Variable', sans-serif;
+		font-family: var(--font-body);
 		color: var(--muted);
 		font-size: 11px;
 	}
 	dd.text-value {
-		font-family: 'DM Sans Variable', sans-serif;
+		font-family: var(--font-body);
 		font-size: 16px;
 		padding-top: 3px;
 	}
@@ -499,13 +500,8 @@
 	}
 	select {
 		width: 100%;
-		min-height: 44px;
-		font: inherit;
 		font-size: 14px;
-		padding: 10px 12px;
-		color: var(--text);
 		background: var(--surface-raised);
-		border: 1px solid var(--border);
 		border-radius: 7px;
 		margin-bottom: 14px;
 	}
@@ -519,7 +515,7 @@
 		margin: 23px 0 22px;
 	}
 	.element-notes dd {
-		font-family: 'DM Sans Variable', sans-serif;
+		font-family: var(--font-body);
 		font-size: 14px;
 		line-height: 1.7;
 		margin-top: 6px;
@@ -560,8 +556,8 @@
 		color: var(--text);
 		min-width: 0;
 		transition:
-			background 150ms,
-			border-color 150ms;
+			background var(--motion-fast),
+			border-color var(--motion-fast);
 	}
 	.neighbor:hover {
 		background: var(--surface);
@@ -625,7 +621,6 @@
 		.element-hero {
 			grid-template-columns: 180px minmax(0, 1fr);
 			align-items: start;
-			gap: 24px;
 		}
 		.atom-preview {
 			grid-column: 1 / -1;
@@ -731,14 +726,12 @@
 		.physical-properties > div:nth-child(odd) {
 			border-left: 0;
 			padding-left: 0;
+			padding-right: 14px;
 		}
 		.physical-properties > div:nth-child(even) {
 			border-left: 1px solid var(--border);
 			padding-left: 16px;
 			padding-right: 0;
-		}
-		dd {
-			font-size: 22px;
 		}
 		.electron-panel,
 		.element-trends {

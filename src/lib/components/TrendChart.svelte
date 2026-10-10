@@ -13,15 +13,13 @@
 		active?: number | null;
 		items?: Element[];
 		compact?: boolean;
-		onselect?: (number: number) => void;
 	}
 
 	let {
 		trend = 'ionizationEnergy',
 		active = null,
 		items = elements,
-		compact = false,
-		onselect
+		compact = false
 	}: Props = $props();
 	let clientWidth = $state(0);
 	let selectedNumber = $state<number | null>(null);
@@ -105,7 +103,6 @@
 
 	function select(number: number) {
 		selectedNumber = number;
-		onselect?.(number);
 	}
 
 	function selectFromPointer(event: PointerEvent | MouseEvent) {
@@ -316,7 +313,7 @@
 	}
 	.axis-label {
 		fill: var(--muted);
-		font-family: 'DM Sans Variable', sans-serif;
+		font-family: var(--font-body);
 		font-size: 11px;
 		font-variant-numeric: tabular-nums;
 	}
@@ -346,10 +343,6 @@
 		cursor: crosshair;
 		touch-action: pan-y;
 	}
-	.chart-interaction:focus-visible {
-		outline: 2px solid var(--accent);
-		outline-offset: 4px;
-	}
 	.chart-caption {
 		display: flex;
 		justify-content: space-between;
@@ -375,14 +368,10 @@
 		color: var(--muted);
 	}
 	select {
-		color: var(--text);
 		background: var(--surface-raised);
-		border: 1px solid var(--border);
 		border-radius: 7px;
 		width: 100%;
-		min-height: 44px;
 		padding: 8px 12px;
-		font: inherit;
 		font-size: 14px;
 	}
 	.chart-access p {

@@ -1,6 +1,8 @@
 import { getElement, type Element } from '#lib/data/elements.js';
+import type { ConfigurationView } from '#lib/view-state.js';
 
-export type ConfigurationView = 'short' | 'full' | 'shell';
+export { normalizeConfigurationView, type ConfigurationView } from '#lib/view-state.js';
+
 export interface Orbital {
 	n: number;
 	subshell: 's' | 'p' | 'd' | 'f';
@@ -30,10 +32,6 @@ type CoreResolver = (symbol: string) => string | undefined;
 const coreElectrons: Record<string, number> = { He: 2, Ne: 10, Ar: 18, Kr: 36, Xe: 54, Rn: 86 };
 const capacities = { s: 2, p: 6, d: 10, f: 14 };
 const resolveReferenceCore: CoreResolver = (symbol) => getElement(symbol)?.electronConfiguration;
-
-export function normalizeConfigurationView(value: string | null): ConfigurationView {
-	return value === 'short' || value === 'shell' ? value : 'full';
-}
 
 export function orbitalNotation(orbital: Orbital): string {
 	return `${orbital.n}${orbital.subshell}${orbital.electrons}`;

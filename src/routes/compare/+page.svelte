@@ -11,28 +11,19 @@
 		getElectronConfiguration,
 		orbitalNotation
 	} from '#lib/chemistry/electron-configuration.js';
-	import { categories, getElement, type Element } from '#lib/data/elements.js';
+	import { getCategoryLabel, getElement, type Element } from '#lib/data/elements.js';
+	import { formatNumber } from '#lib/format.js';
+	import { readCompareView } from '#lib/view-state.js';
 
 	let pending = $state(false);
 	let notice = $state('');
-	const number = new Intl.NumberFormat('en-US', { maximumFractionDigits: 4 });
-
-	function readSelection(raw: string | null): Element[] {
-		if (raw === null) return [getElement(6)!, getElement(14)!];
-		const chosen: Element[] = [];
-		for (const identifier of raw.split(',')) {
-			if (!/^\d+$/.test(identifier)) continue;
-			const element = getElement(Number(identifier));
-			if (element && !chosen.some((selected) => selected.number === element.number))
-				chosen.push(element);
-			if (chosen.length === 4) break;
-		}
-		return chosen;
-	}
+	let picker: PeriodicTablePicker;
 
 	const effectiveUrl = $derived(page.shallow?.url ?? page.url);
 	const selected = $derived(
-		readSelection(browser ? effectiveUrl.searchParams.get('elements') : null)
+		readCompareView(browser ? effectiveUrl.searchParams : new URLSearchParams()).elements.map(
+			(number) => getElement(number)!
+		)
 	);
 	const configurations = $derived(
 		new Map(selected.map((element) => [element.number, getElectronConfiguration(element)]))
@@ -44,17 +35,15 @@
 		return result?.status === 'available' ? result.full : 'Not available';
 	}
 
-	function categoryLabel(category: string) {
-		return categories.find((item) => item.id === category)?.label ?? category;
-	}
-
 	function numeric(value: number | null | undefined, unit = '') {
-		if (value == null || !Number.isFinite(value)) return 'Not available';
-		const formatted =
-			value !== 0 && Math.abs(value) < 0.01
-				? new Intl.NumberFormat('en-US', { maximumFractionDigits: 7 }).format(value)
-				: number.format(value);
-		return `${formatted}${unit ? ` ${unit}` : ''}`;
+		return formatNumber(value, {
+			locale: 'en-US',
+			maximumFractionDigits: 4,
+			smallValueMaximumFractionDigits: 7,
+			smallValueThreshold: 0.01,
+			missing: 'Not available',
+			unit
+		});
 	}
 
 	const sections: {
@@ -70,7 +59,7 @@
 			rows: [
 				{ label: 'Atomic number', value: (element) => String(element.number) },
 				{ label: 'Atomic mass', value: (element) => numeric(element.atomicMass, 'u') },
-				{ label: 'Element family', value: (element) => categoryLabel(element.category) },
+				{ label: 'Element family', value: (element) => getCategoryLabel(element.category) },
 				{ label: 'Period', value: (element) => String(element.period) },
 				{ label: 'Group', value: (element) => numeric(element.group) },
 				{ label: 'State at room temperature', value: (element) => element.phase || 'Not available' }
@@ -153,16 +142,14 @@
 		const next = selected.filter((chosen) => chosen.number !== element.number);
 		await setSelection(next, `Removed ${element.name}. ${next.length} elements selected.`);
 		await tick();
-		document
-			.querySelector<HTMLButtonElement>(`.periodic-picker [data-element="${element.number}"]`)
-			?.focus();
+		picker?.focusElement(element.number);
 	}
 
 	async function clearSelection() {
 		if (pending) return;
 		await setSelection([], 'Comparison cleared. Select elements from the periodic table.');
 		await tick();
-		document.querySelector<HTMLButtonElement>('.periodic-picker [data-element="1"]')?.focus();
+		picker?.focusElement(1);
 	}
 
 	function preset(identifiers: number[]) {
@@ -229,7 +216,14 @@
 				: 'Click an element to select it. Click it again to remove it.'}
 		</p>
 
-		<PeriodicTablePicker {selected} {pending} onselect={toggleElement} />
+		<PeriodicTablePicker
+			bind:this={picker}
+			{selected}
+			{pending}
+			descriptionId="selection-instructions"
+			comparisonHref="#properties-heading"
+			onselect={toggleElement}
+		/>
 
 		<div class="selection-footer">
 			<p class="text-muted">Your selection is saved in this page’s link.</p>

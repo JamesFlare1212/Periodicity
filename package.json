@@ -10,16 +10,20 @@
 	"license": "MIT",
 	"packageManager": "bun@1.4.2",
 	"scripts": {
-		"dev": "bun --bun vite --host 0.0.0.0",
-		"build": "bun --bun vite build",
+		"dev": "bun run data:check && bun --bun vite --host 0.0.0.0",
+		"build": "bun run data:check && bun --bun vite build",
 		"preview": "bun --bun vite preview --host 0.0.0.0",
 		"start": "bun run preview",
 		"check": "bun --bun svelte-kit sync && bun --bun svelte-check --tsconfig ./tsconfig.json",
 		"test": "bun test",
 		"format": "bunx prettier --write .",
-		"format:check": "bunx prettier --check ."
+		"format:check": "bunx prettier --check .",
+		"data:generate": "bun scripts/generate-elements.ts",
+		"data:check": "bun scripts/generate-elements.ts --check",
+		"test:e2e": "bunx playwright test"
 	},
 	"devDependencies": {
+		"@playwright/test": "^1.64.0",
 		"@sveltejs/adapter-static": "^4.0.0",
 		"@sveltejs/kit": "^3.0.1",
 		"@sveltejs/vite-plugin-svelte": "^7.3.1",

@@ -9,7 +9,6 @@
 		getElement,
 		getPhaseAtTemperature,
 		trendDefinitions,
-		normalizeTrendValue,
 		type Element,
 		type CategoryId,
 		type TrendId
@@ -19,14 +18,17 @@
 	import ElectronConfigurationDialog from '#lib/components/ElectronConfigurationDialog.svelte';
 	import MassAddition from '#lib/components/MassAddition.svelte';
 	import Icon from '#lib/components/Icon.svelte';
+	import PeriodicTable from '#lib/components/PeriodicTable.svelte';
+	import LayoutSwitch from '#lib/components/LayoutSwitch.svelte';
+	import { VIEW_DEFAULTS, readExploreView } from '#lib/view-state.js';
 	import { calculateElementSelection } from '#lib/chemistry/element-selection.js';
 
-	const DEFAULT_TEMPERATURE = 298;
+	const DEFAULT_TEMPERATURE = VIEW_DEFAULTS.explore.temperature;
 
-	let selectedFamilies = $state<CategoryId[]>([]);
-	let display = $state<'families' | 'phase' | TrendId>('families');
+	let selectedFamilies = $state<CategoryId[]>([...VIEW_DEFAULTS.explore.families]);
+	let display = $state<'families' | 'phase' | TrendId>(VIEW_DEFAULTS.explore.display);
 	let temperature = $state(DEFAULT_TEMPERATURE);
-	let selected = $state<Element | null>(null);
+	let selected = $state<Element | null>(getElement(VIEW_DEFAULTS.explore.element ?? '') ?? null);
 	let hovered = $state<Element | null>(null);
 	let configurationElement = $state<Element | null>(null);
 	let mobileView = $state<'grid' | 'table'>('grid');
@@ -61,19 +63,11 @@
 
 	$effect(() => {
 		if (!browser) return;
-		const params = effectiveUrl.searchParams;
-		const families = params.getAll('family').flatMap((value) => value.split(','));
-		selectedFamilies = categories
-			.filter((family) => families.includes(family.id))
-			.map((family) => family.id);
-		const d = params.get('display');
-		display =
-			d === 'phase' || trendDefinitions.some((item) => item.id === d)
-				? (d as typeof display)
-				: 'families';
-		const t = Number(params.get('temperature') ?? DEFAULT_TEMPERATURE);
-		temperature = Number.isFinite(t) ? Math.min(6000, Math.max(0, t)) : DEFAULT_TEMPERATURE;
-		selected = getElement(params.get('element') ?? '') ?? null;
+		const view = readExploreView(effectiveUrl.searchParams);
+		selectedFamilies = view.families;
+		display = view.display;
+		temperature = view.temperature;
+		selected = getElement(view.element ?? '') ?? null;
 	});
 	function update(params: Record<string, string | null>) {
 		const url = new URL(effectiveUrl.href);
@@ -134,28 +128,6 @@
 		update({ temperature: String(temperature), display: 'phase' });
 		return temperature;
 	}
-	function arrowNavigate(event: KeyboardEvent, element: Element) {
-		let next: Element | undefined;
-		if (event.key === 'ArrowRight') next = getElement(Math.min(118, element.number + 1));
-		if (event.key === 'ArrowLeft') next = getElement(Math.max(1, element.number - 1));
-		if (event.key === 'ArrowDown')
-			next = elements
-				.filter((e) => e.xpos === element.xpos && e.ypos > element.ypos)
-				.sort((a, b) => a.ypos - b.ypos)[0];
-		if (event.key === 'ArrowUp')
-			next = elements
-				.filter((e) => e.xpos === element.xpos && e.ypos < element.ypos)
-				.sort((a, b) => b.ypos - a.ypos)[0];
-		if (event.key === 'Home') next = getElement(1);
-		if (event.key === 'End') next = getElement(118);
-		if (next) {
-			event.preventDefault();
-			document
-				.querySelector<HTMLButtonElement>(`.periodic-grid [data-element="${next.number}"]`)
-				?.focus();
-			hovered = next;
-		}
-	}
 </script>
 
 <svelte:window
@@ -201,18 +173,8 @@
 				onclick={(event) => addToMass(preview, event.currentTarget)}
 				><Icon name="plus" size={17} />Add {preview.symbol} to mass</button
 			>
-			<div class="mobile-view" aria-label="Element layout">
-				<button
-					class:active={mobileView === 'grid'}
-					aria-label="Grid view"
-					aria-pressed={mobileView === 'grid'}
-					onclick={() => (mobileView = 'grid')}><Icon name="grid" size={17} /></button
-				><button
-					class:active={mobileView === 'table'}
-					aria-label="Periodic table view"
-					aria-pressed={mobileView === 'table'}
-					onclick={() => (mobileView = 'table')}><Icon name="table" size={17} /></button
-				>
+			<div class="mobile-view">
+				<LayoutSwitch value={mobileView} onchange={(value) => (mobileView = value)} />
 			</div>
 		</div>
 		<div
@@ -283,26 +245,9 @@
 				>{/each}</select
 		>
 	</div>
-	<div class="mobile-preview panel" class:mass-active={massResult !== null}>
-		{#if massResult}
-			<MassAddition
-				selection={massSelection}
-				result={massResult}
-				onundo={undoMass}
-				onclose={closeMass}
-			/>
-		{:else}
-			<ElementPreview
-				element={preview}
-				{display}
-				{temperature}
-				onconfiguration={openConfiguration}
-			/>
-		{/if}
-	</div>
 	<div class="table-caption">
 		{#if isTrend && trend}
-			<span class="table-caption-right" class:affinity={display === 'electronAffinity'}
+			<span class="table-caption-right"
 				>{trend.label}
 				<span
 					class="heatmap-key"
@@ -314,31 +259,24 @@
 			</span>
 		{/if}
 	</div>
-	<!-- svelte-ignore a11y_no_noninteractive_tabindex (The labeled table scroll region supports keyboard scrolling.) -->
-	<div
-		class="table-scroll"
-		class:mobile-table={mobileView === 'table'}
-		role="region"
-		aria-label="Periodic table, horizontally scrollable on small screens"
-		tabindex={mobileView === 'table' ? 0 : undefined}
-	>
-		<div class="periodic-grid">
-			{#each Array.from({ length: 18 }, (_, index) => index + 1) as group}<span
-					class="group-label"
-					style={`grid-column:${group + 1};grid-row:1`}>{group}</span
-				>{/each}
-			<span class="group-caption">Group</span>
-			{#each Array.from({ length: 7 }, (_, index) => index + 1) as period}<span
-					class="period-label"
-					style={`grid-row:${period + 1}`}>{period}</span
-				>{/each}
-			<div class="table-preview">
+	<div class="periodic-workspace">
+		<PeriodicTable
+			{mobileView}
+			label="Periodic table, horizontally scrollable on small screens"
+			matched={matchedNumbers}
+			{selectedFamilies}
+			onfamily={filterFamily}
+			mobileContent
+			contentHeight={massResult ? 'var(--mass-preview-height)' : undefined}
+		>
+			{#snippet content()}
 				{#if massResult}
 					<MassAddition
 						selection={massSelection}
 						result={massResult}
 						onundo={undoMass}
 						onclose={closeMass}
+						embedded
 					/>
 				{:else}
 					<ElementPreview
@@ -348,63 +286,28 @@
 						onconfiguration={openConfiguration}
 					/>
 				{/if}
-			</div>
-			{#each elements as element}<div
-					class="tile-position"
-					style={`grid-column:${element.xpos + 1};grid-row:${element.ypos + 1};--heat:${isTrend ? (normalizeTrendValue(element, display as TrendId) ?? 0) : 0}`}
-					onkeydown={(event) => arrowNavigate(event, element)}
-					role="presentation"
-					class:heatmap={isTrend}
-				>
-					<ElementTile
-						{element}
-						selected={selected?.number === element.number}
-						dimmed={!matchedNumbers.has(element.number)}
-						{display}
-						{temperature}
-						onselect={selectElement}
-						onadd={addToMass}
-						onpreview={(element) => (hovered = element)}
-						onleave={() => {
-							if (
-								document.activeElement instanceof HTMLElement &&
-								document.activeElement.dataset.element === String(element.number)
-							)
-								return;
-							if (hovered?.number === element.number) hovered = null;
-						}}
-					/>
-				</div>{/each}
-			<button
-				class="f-block-placeholder lanthanides"
-				onclick={() => filterFamily('lanthanide')}
-				aria-label="Filter lanthanides, elements 57 to 71"
-				aria-pressed={selectedFamilies.includes('lanthanide')}
-				><span>57–71</span><Icon name="chevron-down" size={16} /></button
-			>
-			<button
-				class="f-block-placeholder actinides"
-				onclick={() => filterFamily('actinide')}
-				aria-label="Filter actinides, elements 89 to 103"
-				aria-pressed={selectedFamilies.includes('actinide')}
-				><span>89–103</span><Icon name="chevron-down" size={16} /></button
-			>
-			<span class="f-block-label lanthanide-label">Lanthanides</span><span
-				class="f-block-label actinide-label">Actinides</span
-			>
-		</div>
-	</div>
-	<div class="mobile-element-grid" class:hidden={mobileView === 'table'}>
-		{#each matches as element}<ElementTile
-				{element}
-				selected={selected?.number === element.number}
-				{display}
-				{temperature}
-				onselect={selectElement}
-				onadd={addToMass}
-				onpreview={() => {}}
-				onleave={() => {}}
-			/>{/each}
+			{/snippet}
+			{#snippet tile(element)}
+				<ElementTile
+					{element}
+					selected={selected?.number === element.number}
+					dimmed={!matchedNumbers.has(element.number)}
+					{display}
+					{temperature}
+					onselect={selectElement}
+					onadd={addToMass}
+					onpreview={(element) => (hovered = element)}
+					onleave={() => {
+						if (
+							document.activeElement instanceof HTMLElement &&
+							document.activeElement.dataset.element === String(element.number)
+						)
+							return;
+						if (hovered?.number === element.number) hovered = null;
+					}}
+				/>
+			{/snippet}
+		</PeriodicTable>
 	</div>
 	<div class="legend-wrap">
 		<div class="legend-heading">
@@ -606,12 +509,6 @@
 		font-size: 11px;
 		min-height: 1.5em;
 	}
-	.table-scroll {
-		margin-top: 16px;
-	}
-	.table-caption + .table-scroll {
-		margin-top: 0;
-	}
 	.table-caption-right {
 		display: flex;
 		align-items: center;
@@ -629,75 +526,6 @@
 		background: linear-gradient(90deg, var(--surface), var(--heatmap-color, var(--accent)));
 		border-radius: 2px;
 	}
-	.periodic-grid {
-		--cell: clamp(73px, calc(6.1vw - 3px), 83px);
-		display: grid;
-		grid-template-columns: 14px repeat(18, minmax(0, 1fr));
-		grid-template-rows: 23px repeat(7, var(--cell)) 13px repeat(2, var(--cell));
-		gap: 5px;
-	}
-	.group-label,
-	.period-label {
-		font-size: 10px;
-		color: var(--muted);
-		display: flex;
-		align-items: center;
-		justify-content: center;
-	}
-	.group-caption {
-		display: none;
-	}
-	.period-label {
-		grid-column: 1;
-	}
-	.table-preview {
-		grid-column: 4 / 14;
-		grid-row: 2 / 5;
-		align-self: stretch;
-		padding: 1px 12px 6px;
-	}
-	.tile-position {
-		min-width: 0;
-		min-height: 0;
-	}
-	.f-block-placeholder {
-		grid-column: 4;
-		min-width: 0;
-		border: 1px dashed var(--border);
-		border-radius: 5px;
-		background: transparent;
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		justify-content: center;
-		gap: 7px;
-		font-size: 10px;
-	}
-	.f-block-placeholder:hover {
-		border-color: currentColor;
-	}
-	.lanthanides {
-		grid-row: 7;
-		color: var(--category-lanthanide);
-	}
-	.actinides {
-		grid-row: 8;
-		color: var(--category-actinide);
-	}
-	.f-block-label {
-		grid-column: 2 / 4;
-		align-self: center;
-		justify-self: end;
-		padding-right: 10px;
-		font-size: 10px;
-		color: var(--muted);
-	}
-	.lanthanide-label {
-		grid-row: 10;
-	}
-	.actinide-label {
-		grid-row: 11;
-	}
 	.legend-wrap {
 		margin-top: 24px;
 		padding: 17px 20px 19px;
@@ -711,7 +539,7 @@
 		color: var(--text);
 		font-size: 11px;
 		margin-bottom: 9px;
-		min-height: 30px;
+		min-height: 44px;
 		align-items: center;
 	}
 	.legend-tip {
@@ -728,7 +556,7 @@
 		align-items: center;
 		gap: 6px;
 		padding: 5px 2px;
-		min-height: 30px;
+		min-height: 44px;
 		background: transparent;
 		border: 0;
 		color: var(--family-color);
@@ -761,6 +589,7 @@
 		text-underline-offset: 4px;
 	}
 	.reset-filter {
+		min-height: 44px;
 		color: var(--accent);
 		border: 0;
 		background: transparent;
@@ -819,8 +648,6 @@
 		font-size: 12px;
 		min-height: 44px;
 	}
-	.mobile-element-grid,
-	.mobile-preview,
 	.mobile-family-filter {
 		display: none;
 	}
@@ -833,33 +660,15 @@
 		}
 	}
 	@media (max-width: 1000px) {
-		.table-caption-right.affinity {
-			display: flex;
-			flex-wrap: wrap;
-			gap: 8px;
-		}
 		.heading-note {
 			display: none;
 		}
-		.table-toolbar {
-			gap: 12px;
+		.periodic-workspace {
+			margin-top: 16px;
 		}
-		.periodic-grid {
-			--cell: 73px;
-			gap: 4px;
-		}
-		.table-preview {
-			padding: 0 0 0 4px;
-		}
-		.family-legend {
-			column-gap: 12px;
-		}
-	}
-	@media (max-width: 1000px) {
 		.table-toolbar {
 			flex-direction: column;
 			align-items: stretch;
-			padding-bottom: 16px;
 			gap: 12px;
 		}
 		.temperature-panel {
@@ -886,35 +695,7 @@
 			min-width: 0;
 		}
 		.mobile-view {
-			display: flex;
-			border: 1px solid var(--border);
-			border-radius: 7px;
-			padding: 2px;
-		}
-		.mobile-view button {
-			width: 44px;
-			height: 44px;
-			display: grid;
-			place-items: center;
-			background: transparent;
-			border: 0;
-			color: var(--muted);
-			border-radius: 4px;
-		}
-		.mobile-view button.active {
-			color: var(--accent);
-			background: var(--accent-soft);
-		}
-		.mobile-preview {
 			display: block;
-			margin-top: 16px;
-		}
-		.mobile-preview.mass-active {
-			height: var(--mass-preview-height);
-		}
-		.mobile-preview :global(.mass-addition) {
-			border: 0;
-			border-radius: inherit;
 		}
 		.mobile-family-filter {
 			display: flex;
@@ -931,41 +712,7 @@
 			min-width: 0;
 			font-size: 14px;
 		}
-		.table-scroll {
-			display: none;
-		}
-		.table-scroll.mobile-table {
-			display: block;
-			overflow-x: auto;
-			padding: 0 0 12px;
-			scrollbar-color: var(--border) var(--surface);
-		}
-		.periodic-grid {
-			width: 1120px;
-			--cell: 83px;
-			gap: 5px;
-		}
-		.table-preview {
-			display: none;
-		}
-		.mobile-element-grid {
-			display: grid;
-			grid-template-columns: repeat(6, minmax(0, 1fr));
-			grid-auto-rows: 91px;
-			gap: 7px;
-			margin-top: 10px;
-		}
-		.mobile-element-grid.hidden {
-			display: none;
-		}
 		.table-caption {
-			display: none;
-		}
-		.table-caption + .table-scroll {
-			margin-top: 16px;
-		}
-		.table-caption-right,
-		.table-caption-right.affinity {
 			display: none;
 		}
 		.legend-wrap {
@@ -976,14 +723,10 @@
 			gap: 0 16px;
 		}
 		.family-legend button {
-			min-height: 44px;
 			font-size: 12px;
 		}
 		.legend-tip {
 			display: none;
-		}
-		.reset-filter {
-			min-height: 30px;
 		}
 		.explore-bottom {
 			align-items: flex-start;
@@ -1018,15 +761,8 @@
 		.quick-mass-add {
 			width: 100%;
 		}
-		.mobile-view {
-			margin-left: 0;
-		}
 		.temperature-panel {
-			grid-template-columns: minmax(0, 1fr);
 			padding: 4px 12px 8px;
-		}
-		.temperature-control {
-			gap: 8px;
 		}
 		.temperature-control input[type='number'] {
 			width: 108px;
@@ -1035,9 +771,6 @@
 		.phase-counts {
 			gap: 4px 12px;
 			font-size: 11px;
-		}
-		.mobile-element-grid {
-			grid-template-columns: repeat(4, minmax(0, 1fr));
 		}
 	}
 </style>

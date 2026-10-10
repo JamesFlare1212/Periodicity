@@ -4,7 +4,8 @@
 		configurationText,
 		getElectronConfiguration,
 		orbitalNotation,
-		type ConfigurationView
+		type ConfigurationView,
+		type Orbital
 	} from '#lib/chemistry/electron-configuration.js';
 	import ElectronConfiguration from './ElectronConfiguration.svelte';
 	import Icon from './Icon.svelte';
@@ -66,6 +67,14 @@
 	}
 </script>
 
+{#snippet orbitals(items: Orbital[])}
+	{#each items as orbital}
+		<span class:core={orbital.core} class="orbital"
+			><ElectronConfiguration configuration={orbitalNotation(orbital)} /></span
+		>{' '}
+	{/each}
+{/snippet}
+
 <div
 	class="configuration-viewer"
 	class:contained
@@ -112,11 +121,7 @@
 			</div>
 		{:else if activeView === 'full'}
 			<div class="configuration-formula">
-				{#each result.orbitals as orbital}
-					<span class:core={orbital.core} class="orbital"
-						><ElectronConfiguration configuration={orbitalNotation(orbital)} /></span
-					>{' '}
-				{/each}
+				{@render orbitals(result.orbitals)}
 			</div>
 		{:else}
 			<div class="shells">
@@ -124,11 +129,7 @@
 					<div class="shell-row">
 						<span class="shell-label">n = {shell.n}</span>
 						<div class="configuration-formula">
-							{#each shell.orbitals as orbital}
-								<span class:core={orbital.core} class="orbital"
-									><ElectronConfiguration configuration={orbitalNotation(orbital)} /></span
-								>{' '}
-							{/each}
+							{@render orbitals(shell.orbitals)}
 						</div>
 						<span class="shell-count"
 							>{shell.electrons} <span aria-hidden="true">e⁻</span><span class="sr-only"

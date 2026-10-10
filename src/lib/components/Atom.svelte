@@ -24,7 +24,6 @@
 
 <figure
 	class="atom"
-	class:compact
 	style={`--element-color: ${color ?? `var(--category-${element.category})`}; --element-bg: ${background ?? `var(--category-${element.category}-bg)`}`}
 >
 	<svg
@@ -97,7 +96,7 @@
 	}
 	.nucleus-number {
 		fill: var(--muted);
-		font-family: 'DM Sans Variable', sans-serif;
+		font-family: var(--font-body);
 		font-size: 9px;
 	}
 	.shell-key {

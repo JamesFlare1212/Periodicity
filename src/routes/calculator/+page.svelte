@@ -3,15 +3,16 @@
 	import { page } from '$app/state';
 	import { tick, untrack } from 'svelte';
 	import Icon from '#lib/components/Icon.svelte';
+	import FormulaDisplay from '#lib/components/FormulaDisplay.svelte';
+	import { VIEW_DEFAULTS, readCalculatorView } from '#lib/view-state.js';
 	import {
 		calculateMolarMass,
-		formulaFragments,
 		normalizeFormula,
 		type MolarMassResult
 	} from '#lib/chemistry/formula.js';
 
-	let formula = $state('H2O');
-	let result = $state<MolarMassResult | null>(calculateMolarMass('H2O'));
+	let formula = $state(VIEW_DEFAULTS.calculator.formula);
+	let result = $state<MolarMassResult | null>(calculateMolarMass(VIEW_DEFAULTS.calculator.formula));
 	let error = $state('');
 	let notice = $state('');
 	let lastUrlFormula: string | undefined;
@@ -33,7 +34,6 @@
 		result !== null && normalizeFormula(formula).replace(/\s+/g, '') !== result.formula
 	);
 	const effectiveUrl = $derived(page.shallow?.url ?? page.url);
-	const fragments = $derived(result ? formulaFragments(result.formula) : []);
 
 	function compute(value: string): boolean {
 		try {
@@ -53,7 +53,7 @@
 	}
 
 	$effect(() => {
-		const fromUrl = effectiveUrl.searchParams.get('formula') ?? 'H2O';
+		const fromUrl = readCalculatorView(effectiveUrl.searchParams).formula;
 		if (fromUrl !== lastUrlFormula) {
 			lastUrlFormula = fromUrl;
 			untrack(() => {
@@ -148,9 +148,7 @@
 							class:active={result?.formula === example.formula && !isChanged}
 						>
 							<span class="example-formula" aria-hidden="true"
-								>{#each formulaFragments(example.formula) as fragment}{#if fragment.subscript}<sub
-											>{fragment.text}</sub
-										>{:else}{fragment.text}{/if}{/each}</span
+								><FormulaDisplay formula={example.formula} /></span
 							>
 							<span class="example-name">{example.name}</span>
 						</button>
@@ -166,8 +164,7 @@
 					>
 				</div>
 				<div class="result-formula" aria-label={`Formula ${result.formula}`}>
-					{#each fragments as fragment}{#if fragment.subscript}<sub>{fragment.text}</sub
-							>{:else}{fragment.text}{/if}{/each}
+					<FormulaDisplay formula={result.formula} />
 				</div>
 				<div class="mass-value">
 					<strong>{massFormat.format(result.totalMass)}</strong><span>g/mol</span>
@@ -413,8 +410,8 @@
 		cursor: pointer;
 		font: inherit;
 		transition:
-			background 150ms,
-			border-color 150ms;
+			background var(--motion-fast),
+			border-color var(--motion-fast);
 	}
 	.example-buttons button:hover {
 		border-color: var(--accent);
@@ -433,13 +430,6 @@
 		font-size: 12px;
 		color: var(--muted);
 		line-height: 1.5;
-	}
-	sub {
-		font-size: 0.65em;
-		line-height: 0;
-		position: relative;
-		vertical-align: baseline;
-		bottom: -0.2em;
 	}
 	.mass-result {
 		display: flex;
@@ -703,12 +693,7 @@
 		font-size: 21px;
 		font-weight: 500;
 	}
-	input:focus-visible,
-	button:focus-visible,
-	a:focus-visible {
-		outline: 3px solid var(--accent);
-		outline-offset: 3px;
-	}
+
 	@media (max-width: 1100px) {
 		.calculator-workbench {
 			grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
@@ -769,7 +754,6 @@
 		}
 		.composition-heading p {
 			margin-top: 8px;
-			line-height: 1.6;
 		}
 		.composition-table,
 		.composition-table tbody,
@@ -807,9 +791,6 @@
 		}
 		.composition-table .percentage-cell {
 			width: auto;
-		}
-		.percentage-value {
-			margin-bottom: 8px;
 		}
 		.composition-table tfoot tr {
 			display: grid;

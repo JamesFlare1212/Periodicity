@@ -6,19 +6,19 @@
 	import Icon from '#lib/components/Icon.svelte';
 	import TrendChart from '#lib/components/TrendChart.svelte';
 	import {
-		elements,
+		searchElements,
+		availableTrends,
 		formatTrendValue,
 		getTrendValue,
-		trendDefinitions,
 		type TrendId
 	} from '#lib/data/elements.js';
 
-	const availableTrends = trendDefinitions.filter((item) => item.id !== 'atomicMass');
+	import { VIEW_DEFAULTS, readTrendsView } from '#lib/view-state.js';
 	const pageSize = 24;
 	type SortKey = 'number' | 'name' | 'value';
-	let selectedTrend = $state<TrendId>('ionizationEnergy');
-	let view = $state<'chart' | 'table'>('chart');
-	let period = $state('all');
+	let selectedTrend = $state<TrendId>(VIEW_DEFAULTS.trends.property);
+	let view = $state<'chart' | 'table'>(VIEW_DEFAULTS.trends.view);
+	let period = $state(VIEW_DEFAULTS.trends.period);
 	let query = $state('');
 	let pageIndex = $state(0);
 	let sortKey = $state<SortKey>('number');
@@ -26,13 +26,7 @@
 	let effectiveUrl = $derived(page.shallow?.url ?? page.url);
 	let definition = $derived(availableTrends.find((item) => item.id === selectedTrend)!);
 	let filteredElements = $derived(
-		elements.filter(
-			(element) =>
-				(period === 'all' || element.period === Number(period)) &&
-				`${element.number} ${element.name} ${element.symbol}`
-					.toLowerCase()
-					.includes(query.trim().toLowerCase())
-		)
+		searchElements(query).filter((element) => period === 'all' || element.period === Number(period))
 	);
 	let knownElements = $derived(
 		filteredElements.filter((element) => getTrendValue(element, selectedTrend) !== null)
@@ -66,13 +60,10 @@
 		if (!browser) return;
 		const parameters = effectiveUrl.searchParams;
 		untrack(() => {
-			const property = parameters.get('property');
-			selectedTrend = availableTrends.some((trend) => trend.id === property)
-				? (property as TrendId)
-				: 'ionizationEnergy';
-			view = parameters.get('view') === 'table' ? 'table' : 'chart';
-			const periodParameter = parameters.get('period');
-			period = periodParameter && /^[1-7]$/.test(periodParameter) ? periodParameter : 'all';
+			const requested = readTrendsView(parameters);
+			selectedTrend = requested.property;
+			view = requested.view;
+			period = requested.period;
 			pageIndex = 0;
 		});
 	});
@@ -390,7 +381,7 @@
 	}
 	.property-navigation h2 {
 		font-size: 13px;
-		font-family: 'DM Sans Variable', sans-serif;
+		font-family: var(--font-body);
 		color: var(--muted);
 		font-weight: 500;
 		margin: 0 0 16px 12px;
@@ -411,8 +402,8 @@
 		text-align: left;
 		min-height: 66px;
 		transition:
-			background 150ms,
-			border-color 150ms;
+			background var(--motion-fast),
+			border-color var(--motion-fast);
 	}
 	.property-option:hover {
 		background: var(--surface);
@@ -729,7 +720,7 @@
 		font-variant-numeric: tabular-nums;
 	}
 	.trend-extremes small {
-		font-family: 'DM Sans Variable', sans-serif;
+		font-family: var(--font-body);
 		font-size: 10px;
 		color: var(--muted);
 	}
@@ -767,7 +758,6 @@
 		}
 		.trend-main-heading {
 			flex-direction: column;
-			gap: 16px;
 		}
 		.view-switch {
 			align-self: end;
@@ -783,7 +773,6 @@
 			padding-top: 0;
 		}
 		.property-list {
-			display: grid;
 			grid-template-columns: repeat(3, minmax(0, 1fr));
 			gap: 8px;
 		}
@@ -843,7 +832,6 @@
 		}
 		.trend-main-heading {
 			flex-direction: column;
-			gap: 16px;
 		}
 		.trend-main-heading h2 {
 			font-size: 23px;
@@ -851,11 +839,8 @@
 		.trend-main-heading p {
 			font-size: 12px;
 		}
-		.view-switch {
-			align-self: start;
-		}
+
 		.view-switch button {
-			min-height: 44px;
 			padding: 8px 14px;
 		}
 		.trend-filters {

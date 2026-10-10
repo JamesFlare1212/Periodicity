@@ -1,9 +1,12 @@
 import { describe, expect, test } from 'bun:test';
 import records from './element-records.json';
+import { normalizeElementRecords, serializeElements } from './normalize-elements.js';
 import {
+	availableTrends,
 	categories,
 	elements,
 	formatTrendValue,
+	getCategoryLabel,
 	getElement,
 	getPhaseAtTemperature,
 	getTrendRange,
@@ -21,6 +24,33 @@ const element = (identifier: number | string) => {
 };
 
 describe('preserved reference data', () => {
+	test('keeps committed runtime data in sync with the complete reference conversion', async () => {
+		expect(elements).toEqual(normalizeElementRecords(records));
+		expect(await Bun.file(new URL('./elements.generated.json', import.meta.url)).text()).toBe(
+			serializeElements(records)
+		);
+	});
+
+	test('keeps reference-only records and conversion out of the browser bundle', async () => {
+		const result = await Bun.build({
+			entrypoints: [new URL('./elements.ts', import.meta.url).pathname],
+			target: 'browser',
+			minify: true
+		});
+		expect(result.success).toBe(true);
+		const bundle = await result.outputs[0].text();
+		for (const field of [
+			'spectral_img',
+			'cpkHexColor',
+			'ionRadius',
+			'named_by',
+			'oxidationStates'
+		]) {
+			expect(bundle).not.toContain(field);
+		}
+		expect(bundle).not.toContain('normalizeElementRecords');
+	});
+
 	test('contains exactly the 118 distinct elements in atomic-number order', () => {
 		expect(elements.map((entry) => entry.number)).toEqual(
 			Array.from({ length: 118 }, (_, index) => index + 1)
@@ -148,6 +178,14 @@ describe('temperature phase estimates', () => {
 });
 
 describe('trend data', () => {
+	test('shares the measured-property options without removing the atomic-mass heatmap', () => {
+		expect(availableTrends).toHaveLength(6);
+		expect(availableTrends.some((trend) => trend.id === 'atomicMass')).toBe(false);
+		expect(trendDefinitions.some((trend) => trend.id === 'atomicMass')).toBe(true);
+		expect(getCategoryLabel('noble-gas')).toBe('Noble gases');
+		expect(getCategoryLabel('unclassified')).toBe('unclassified');
+	});
+
 	test('retains zero separately from unavailable measurements', () => {
 		expect(getTrendValue(element('He'), 'electronAffinity')).toBe(0);
 		expect(getTrendValue(element('Og'), 'electronAffinity')).toBeNull();

@@ -2,28 +2,22 @@
 	import '../app.css';
 	import { page } from '$app/state';
 	import { onMount, tick } from 'svelte';
-	import Icon from '#lib/components/Icon.svelte';
+	import Icon, { type IconName } from '#lib/components/Icon.svelte';
+	import { restoreTheme, saveTheme, type Theme } from '#lib/theme.js';
 	let { children } = $props();
-	let theme = $state('dark');
+	let theme = $state<Theme>('dark');
 	onMount(() => {
-		theme = document.documentElement.dataset.theme ?? 'dark';
+		theme = restoreTheme();
 		void tick().then(() => {
 			document.documentElement.removeAttribute('data-initial-view');
+			document.documentElement.dataset.appReady = 'true';
 		});
 	});
 	function toggleTheme() {
 		theme = theme === 'dark' ? 'light' : 'dark';
-		document.documentElement.dataset.theme = theme;
-		document
-			.querySelector('meta[name="theme-color"]')
-			?.setAttribute('content', theme === 'dark' ? '#10151e' : '#f5f7fa');
-		try {
-			localStorage.setItem('periodicity-theme', theme);
-		} catch {
-			/* Storage is optional. */
-		}
+		saveTheme(theme);
 	}
-	const navigation = [
+	const navigation: { href: string; label: string; icon: IconName }[] = [
 		{ href: '/', label: 'Explore', icon: 'table' },
 		{ href: '/trends/', label: 'Trends', icon: 'chart' },
 		{ href: '/compare/', label: 'Compare', icon: 'compare' }
@@ -152,6 +146,8 @@
 		align-items: center;
 		gap: 9px;
 		min-height: 44px;
+		min-width: 44px;
+		justify-content: center;
 		color: var(--muted);
 		font-size: 13px;
 	}
@@ -194,7 +190,7 @@
 		display: flex;
 		align-items: center;
 		gap: 6px;
-		min-height: 32px;
+		min-height: 44px;
 	}
 	.site-footer a:hover {
 		color: var(--accent);
@@ -235,7 +231,6 @@
 			flex: 1;
 			justify-content: center;
 			padding: 8px 12px;
-			min-height: 44px;
 		}
 		.site-footer {
 			padding: 20px 16px;

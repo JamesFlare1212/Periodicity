@@ -208,7 +208,7 @@
 		gap: 8px;
 		font-size: 12px;
 		color: var(--element-color);
-		min-height: 30px;
+		min-height: 44px;
 	}
 	.details-link:hover {
 		text-decoration: underline;
@@ -263,20 +263,8 @@
 			font-size: clamp(20px, 6vw, 24px);
 			overflow-wrap: anywhere;
 		}
-		.description {
-			font-size: 12px;
-		}
-		.preview-properties {
-			gap: 10px 12px;
-		}
-		.preview-properties > span {
-			font-size: 10px;
-		}
 		.preview-properties b {
 			font-size: 11px;
-		}
-		.details-link {
-			min-height: 44px;
 		}
 		.specimen {
 			align-self: start;

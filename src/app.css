@@ -2,7 +2,7 @@
 @import '@fontsource-variable/space-grotesk';
 
 :root {
-	font-family: 'DM Sans Variable', sans-serif;
+	font-family: var(--font-body);
 	color-scheme: dark;
 	--bg: #10151e;
 	--surface: #171e29;
@@ -50,7 +50,7 @@
 	--trend-atomic-mass: #9de1c6;
 	--radius: 12px;
 	--motion-fast: 140ms;
-	--motion-normal: 220ms;
+	--font-body: 'DM Sans Variable', sans-serif;
 	--font-display: 'Space Grotesk Variable', sans-serif;
 }
 :root[data-theme='light'] {

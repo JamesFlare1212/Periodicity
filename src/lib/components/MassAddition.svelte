@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Icon from './Icon.svelte';
+	import FormulaDisplay from './FormulaDisplay.svelte';
 	import type { Element } from '#lib/data/elements.js';
 	import type { MolarMassResult } from '#lib/chemistry/formula.js';
 
@@ -7,20 +8,27 @@
 		selection,
 		result,
 		onundo,
-		onclose
+		onclose,
+		embedded = false
 	}: {
 		selection: Element[];
 		result: MolarMassResult;
 		onundo: () => void;
 		onclose: () => void;
+		embedded?: boolean;
 	} = $props();
 	const massFormat = new Intl.NumberFormat('en-US', {
 		maximumFractionDigits: 3,
 		useGrouping: false
 	});
+	let formula = $derived(
+		result.composition
+			.map(({ element, count }) => `${element.symbol}${count > 1 ? count : ''}`)
+			.join('')
+	);
 </script>
 
-<section class="mass-addition" aria-label="Quick molar mass calculation">
+<section class="mass-addition" class:embedded aria-label="Quick molar mass calculation">
 	<header>
 		<h2><Icon name="calculator" size={18} /> Molar mass</h2>
 		<div class="mass-actions">
@@ -52,11 +60,7 @@
 	<div class="mass-result">
 		<!-- svelte-ignore a11y_no_noninteractive_tabindex (Long formulas can be scrolled with the keyboard.) -->
 		<div class="compound" role="region" aria-label={`Formula ${result.formula}`} tabindex="0">
-			{#each result.composition as entry (entry.element.symbol)}
-				<span
-					>{entry.element.symbol}{#if entry.count > 1}<sub>{entry.count}</sub>{/if}</span
-				>
-			{/each}
+			<FormulaDisplay {formula} wrapAtoms />
 		</div>
 		<div class="total">
 			<span class="equals" aria-hidden="true">=</span>
@@ -88,6 +92,11 @@
 		border-radius: var(--radius);
 		background: var(--surface);
 		overflow: hidden;
+	}
+	.mass-addition.embedded {
+		border: 0;
+		border-radius: 0;
+		background: transparent;
 	}
 	header {
 		display: flex;
@@ -136,6 +145,7 @@
 		font-family: var(--font-display);
 	}
 	.compound {
+		--formula-sub-offset: 0.25em;
 		min-width: 0;
 		max-height: 1.4em;
 		overflow-y: auto;
@@ -146,17 +156,6 @@
 		line-height: 1.4;
 		scrollbar-color: var(--border) var(--surface);
 		scrollbar-gutter: stable;
-	}
-	.compound span {
-		white-space: nowrap;
-	}
-	sub {
-		font-size: 0.65em;
-		/* Keep subscripts from increasing the line box and triggering a scrollbar. */
-		line-height: 0;
-		vertical-align: baseline;
-		position: relative;
-		top: 0.25em;
 	}
 	.total {
 		flex-shrink: 0;
@@ -199,9 +198,6 @@
 		text-underline-offset: 4px;
 	}
 	@media (max-width: 1000px) {
-		.mass-addition {
-			height: 100%;
-		}
 		.mass-equation {
 			font-size: 16px;
 		}
@@ -228,7 +224,6 @@
 		footer {
 			display: grid;
 			grid-template-columns: minmax(0, 1fr) auto;
-			align-items: center;
 		}
 		footer p {
 			line-height: 1.5;

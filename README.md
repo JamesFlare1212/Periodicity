@@ -19,12 +19,23 @@ Open the local URL printed by Vite (normally `http://localhost:5173`).
 
 ```sh
 bun run check       # Svelte and strict TypeScript diagnostics
-bun test            # Reference data, temperatures, trends, and formula parsing
-bun run build      # Prerender the application and all 118 element pages
-bun run preview    # Serve the production build locally
-bun run format     # Format the source and documentation
+bun test            # Data, URL state, keyboard navigation, and chemistry
+bun run data:check  # Verify the committed runtime data matches its sources
+bun run build       # Prerender the application and all 118 element pages
+bun run preview     # Serve the production build locally
+bun run format      # Format the source and documentation
 bun run format:check
 ```
+
+Browser regressions run against the production build. Install Chromium once, including system libraries on Linux, then run:
+
+```sh
+bunx playwright install --with-deps chromium
+bun run build
+bun run test:e2e
+```
+
+The Playwright suite starts a local preview server and covers URL initialization, consecutive updates, search aliases, comparison limits, focus restoration, mobile keyboard navigation, and saved appearance.
 
 ## Explore
 
@@ -34,12 +45,12 @@ bun run format:check
 - **Temperature:** Select “Physical state” in the left-hand “Color by” menu to show temperature controls and state counts. On desktop, the borderless controls retain their layout space when hidden, so switching modes does not move the table. Small windows collapse the hidden controls to keep the element grid close to the toolbar. Explore estimated states from 0–6,000 K; adjusting the temperature activates physical-state coloring. This is an educational approximation at ordinary pressure. Missing measurements remain unknown, and transitions that do not define a liquid interval are handled separately.
 - **Trends:** Switch between ionization energy, electronegativity, atomic radius, electron affinity, density, and melting point. Inspect exact values on an interactive chart or a sortable, searchable, paginated table. Missing data are represented by gaps, rather than zeroes.
 - **Element pages:** Read the original summaries, electron configurations, discovery information, and physical properties; inspect an illustrative shell model; and navigate to neighboring elements.
-- **Compare:** Click elements directly on the periodic table to compare up to four elements. Click a selected tile again or click its label to remove it, or clear the whole selection. Use arrow keys to move between tiles and Enter or Space to select. The full table scrolls horizontally on small screens. Compare atomic, physical, and chemical properties, and share selections through the URL.
+- **Compare:** Click elements directly on the periodic table to compare up to four elements. Click a selected tile again or click its label to remove it, or clear the whole selection. Use arrow keys to move between tiles and Enter or Space to select. On small screens, switch between a grid and the horizontally scrollable full table. Compare atomic, physical, and chemical properties, including full electron configurations with differing orbital occupancies highlighted, and share selections through the URL.
 - **Molar mass:** Enter formulas such as `H2O`, `C6H12O6`, `Ca(OH)2`, `K4[Fe(CN)6]`, or `CuSO4·5H2O`. Nested parentheses and brackets, pasted subscripts, and middle-dot hydrates are supported. Results include each element's contribution and mass percentage.
 
 On small screens, the default element grid remains readable and element previews size to their content. The Table control shows the complete 18-group layout in a labeled scroll region. Selecting an element locks its preview; select it again to open its detail page. Family filtering remains available above the grid.
 
-Use arrow keys to move around the desktop periodic table, and Enter or Space to select. All controls have visible focus indicators. Both appearances are paired independently, respect reduced motion, and remember the selected appearance when browser storage is available.
+Use arrow keys to move around the desktop periodic table or mobile grid, and Enter or Space to select. All controls have visible focus indicators. Both appearances are paired independently, respect reduced motion, and remember the selected appearance when browser storage is available.
 
 ## Deployment
 
@@ -51,18 +62,31 @@ The static adapter also emits `404.html`. Configure your host to serve it for un
 
 ```text
 src/routes/                 Explorer, trends, comparison, calculator, and element routes
-src/lib/components/         Shared symbols, element tiles, shell model, and trend chart
-src/lib/data/               Typed reference data, provenance, and regression tests
-src/lib/chemistry/          Formula parser, molar mass calculation, and tests
+src/lib/components/         Shared table layout, element buttons, viewers, and charts
+src/lib/data/               Generated runtime data, original records, metadata, and provenance
+src/lib/chemistry/          Formula and electron-configuration logic with unit tests
+src/lib/ui/                 Shared keyboard navigation and unit tests
+src/lib/view-state.ts       Shared route defaults and URL parameter parsing
+scripts/                    Reference-data generation
+e2e/                        Playwright browser regressions
 src/app.css                 Paired theme tokens, fonts, and shared controls
 design-system/periodicity/  Design decisions and interaction principles
 ```
 
-Svelte 5 runes drive the interface. SvelteKit 3 uses package subpath imports (`#lib/*`) and its current configuration in `vite.config.ts`. URL state uses the effective shallow-navigation URL so repeated interactions preserve selections, display modes, temperature, and filters.
+Svelte 5 runes drive the interface. SvelteKit 3 uses package subpath imports (`#lib/*`) and its current configuration in `vite.config.ts`. Shared route parsers also drive the pre-hydration bootstrap. URL state uses the effective shallow-navigation URL so repeated interactions preserve selections, display modes, temperature, and filters.
+
+The explorer and comparison picker share `PeriodicTable.svelte`, `ElementButton.svelte`, layout controls, and keyboard navigation. The explorer mounts one set of 118 tiles and one preview; CSS adapts that same tree for the desktop table, mobile grid, and mobile table. Bun unit tests live beside the modules they protect; browser tests live in `e2e/`.
 
 ## Reference data
 
 This rewrite preserves the original project's 118-element dataset and its curated property corrections. The original general records came from [Periodic-Table-JSON](https://github.com/Bowserinator/Periodic-Table-JSON); numeric properties came from `periodic-table@0.0.8`. Both are vendored as reference data. See [provenance and units](src/lib/data/PROVENANCE.md) and the [upstream data license](src/lib/data/periodic-table-LICENSE.txt).
+
+`scripts/generate-elements.ts` normalizes those records into the committed `elements.generated.json`, containing the properties used by the application. The browser reads this prepared dataset directly. Development and production builds check its freshness; after changing reference records or normalization, regenerate and commit the result:
+
+```sh
+bun run data:generate
+bun run data:check
+```
 
 Values are historical reference measurements, with some representative isotope mass numbers for unstable elements. Unknown properties remain unavailable. The displayed atomic radius is the source's covalent radius; electron affinity uses the energy-released convention, converted from the legacy electron-attachment enthalpy signs. The shell model shows electron counts, with illustrative positions.
 
