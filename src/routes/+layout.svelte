@@ -1,12 +1,15 @@
 <script lang="ts">
 	import '../app.css';
 	import { page } from '$app/state';
-	import { onMount } from 'svelte';
+	import { onMount, tick } from 'svelte';
 	import Icon from '#lib/components/Icon.svelte';
 	let { children } = $props();
 	let theme = $state('dark');
 	onMount(() => {
 		theme = document.documentElement.dataset.theme ?? 'dark';
+		void tick().then(() => {
+			document.documentElement.removeAttribute('data-initial-view');
+		});
 	});
 	function toggleTheme() {
 		theme = theme === 'dark' ? 'light' : 'dark';

@@ -130,6 +130,7 @@
 		temperature = Math.min(6000, Math.max(0, Number(value) || 0));
 		display = 'phase';
 		update({ temperature: String(temperature), display: 'phase' });
+		return temperature;
 	}
 	function arrowNavigate(event: KeyboardEvent, element: Element) {
 		let next: Element | undefined;
@@ -238,7 +239,9 @@
 						min="0"
 						max="6000"
 						value={temperature}
-						onchange={(event) => changeTemperature(event.currentTarget.value)}
+						onchange={(event) => {
+							event.currentTarget.value = String(changeTemperature(event.currentTarget.value));
+						}}
 					/>
 					<span aria-hidden="true">K</span>
 				</div>
@@ -269,7 +272,7 @@
 				>{/each}</select
 		>
 	</div>
-	<div class="mobile-preview" class:panel={!massResult}>
+	<div class="mobile-preview panel">
 		{#if massResult}
 			<MassAddition
 				selection={massSelection}
@@ -286,8 +289,8 @@
 			/>
 		{/if}
 	</div>
-	{#if isTrend && trend}
-		<div class="table-caption">
+	<div class="table-caption">
+		{#if isTrend && trend}
 			<span class="table-caption-right" class:affinity={display === 'electronAffinity'}
 				>{trend.label}
 				<span
@@ -298,8 +301,8 @@
 					{display === 'electronAffinity' ? 'More energy released' : 'Low to high'}
 				</span>
 			</span>
-		</div>
-	{/if}
+		{/if}
+	</div>
 	<!-- svelte-ignore a11y_no_noninteractive_tabindex (The labeled table scroll region supports keyboard scrolling.) -->
 	<div
 		class="table-scroll"
@@ -407,10 +410,8 @@
 					style={`--family-color:${family.color}`}
 					aria-pressed={selectedFamilies.includes(family.id)}
 					onclick={() => filterFamily(family.id)}
-					><i></i>{family.label}{#if selectedFamilies.includes(family.id)}<Icon
-							name="check"
-							size={13}
-						/>{/if}</button
+					><span class="family-marker" aria-hidden="true"><Icon name="check" size={11} /></span
+					>{family.label}</button
 				>{/each}
 		</div>
 	</div>
@@ -436,6 +437,7 @@
 
 <style>
 	.explore-page {
+		--preview-height: 240px;
 		padding-top: 34px;
 		padding-bottom: 30px;
 	}
@@ -487,6 +489,9 @@
 	}
 	.quick-mass-add {
 		white-space: nowrap;
+		width: 170px;
+		flex: 0 0 170px;
+		padding-inline: 12px;
 	}
 	.display-field label {
 		font-size: 14px;
@@ -601,6 +606,7 @@
 		margin: 16px 0 8px;
 		color: var(--muted);
 		font-size: 11px;
+		min-height: 1.5em;
 	}
 	.table-scroll {
 		margin-top: 16px;
@@ -707,6 +713,8 @@
 		color: var(--text);
 		font-size: 11px;
 		margin-bottom: 9px;
+		min-height: 30px;
+		align-items: center;
 	}
 	.legend-tip {
 		color: var(--muted);
@@ -727,16 +735,24 @@
 		border: 0;
 		color: var(--family-color);
 		font-size: 11px;
+		font-weight: 500;
 		transition: opacity var(--motion-fast);
 	}
-	.family-legend button i {
-		width: 7px;
-		height: 7px;
+	.family-marker {
+		width: 13px;
+		height: 13px;
+		flex-shrink: 0;
+		display: grid;
+		place-items: center;
 		border-radius: 2px;
 		background: currentColor;
 	}
-	.family-legend button.active {
-		font-weight: 600;
+	.family-marker :global(svg) {
+		color: var(--bg);
+		visibility: hidden;
+	}
+	.family-legend button.active .family-marker :global(svg) {
+		visibility: visible;
 	}
 	.family-legend button.muted {
 		opacity: 0.5;
@@ -894,6 +910,12 @@
 		.mobile-preview {
 			display: block;
 			margin-top: 16px;
+			height: var(--preview-height);
+			min-height: 0;
+		}
+		.mobile-preview :global(.mass-addition) {
+			border: 0;
+			border-radius: inherit;
 		}
 		.mobile-family-filter {
 			display: flex;
@@ -971,6 +993,17 @@
 		.explore-bottom > a {
 			max-width: 120px;
 			font-size: 11px;
+		}
+	}
+
+	@media (max-width: 760px) {
+		.explore-page {
+			--preview-height: 340px;
+		}
+	}
+	@media (max-width: 360px) {
+		.explore-page {
+			--preview-height: 384px;
 		}
 	}
 

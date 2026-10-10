@@ -152,11 +152,12 @@
 		line-clamp: 2;
 		-webkit-box-orient: vertical;
 		overflow: hidden;
+		min-height: 3.1em;
 	}
 	.preview-properties {
 		display: flex;
 		flex-wrap: wrap;
-		gap: 10px 24px;
+		gap: 10px 16px;
 		margin: 12px 0;
 		font-size: 10px;
 		color: var(--muted);
@@ -216,14 +217,19 @@
 	.preview-atom {
 		opacity: 0.75;
 	}
+	@media (max-width: 1400px) {
+		.preview {
+			grid-template-columns: 99px minmax(0, 1fr);
+		}
+		.preview-atom {
+			display: none;
+		}
+	}
 	@media (max-width: 1200px) {
 		.preview {
 			grid-template-columns: 85px minmax(0, 1fr);
 			gap: 18px;
 			padding-block: 8px;
-		}
-		.preview-atom {
-			display: none;
 		}
 		.specimen {
 			width: 85px;
@@ -236,7 +242,7 @@
 			font-size: 24px;
 		}
 		.preview-properties {
-			gap: 10px 18px;
+			gap: 10px 12px;
 		}
 	}
 	@media (max-width: 760px) {
@@ -246,6 +252,12 @@
 		}
 		.preview-name {
 			gap: 5px;
+			min-height: 52px;
+			align-content: start;
+		}
+		.preview-name h2 {
+			font-size: clamp(20px, 6vw, 24px);
+			overflow-wrap: anywhere;
 		}
 		.description {
 			font-size: 12px;
@@ -263,6 +275,10 @@
 		}
 		.details-link {
 			min-height: 36px;
+		}
+		.preview-actions {
+			min-height: 80px;
+			align-content: start;
 		}
 		.specimen {
 			align-self: start;

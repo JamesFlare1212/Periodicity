@@ -178,7 +178,13 @@
 			<div class="trend-main-heading">
 				<div>
 					<h2 id="selected-property">{definition.label}</h2>
-					<p>{definition.description}</p>
+					<div class="property-description">
+						{#each availableTrends as item}
+							<p class:current={selectedTrend === item.id} aria-hidden={selectedTrend !== item.id}>
+								{item.description}
+							</p>
+						{/each}
+					</div>
 				</div>
 				<div class="view-switch" aria-label="Visualization view">
 					<button
@@ -297,15 +303,14 @@
 										>{formatTrendValue(element, selectedTrend)}</td
 									></tr
 								>
-							{:else}
-								<tr
-									><td colspan="4" class="no-results"
-										>No elements match “{query}”. Try a name, symbol, or atomic number.</td
-									></tr
-								>
 							{/each}
 						</tbody>
 					</table>
+					{#if visibleElements.length === 0}
+						<p class="no-results" role="status">
+							No elements match “{query}”. Try a name, symbol, or atomic number.
+						</p>
+					{/if}
 				</div>
 				<div class="table-pagination">
 					<span
@@ -478,12 +483,24 @@
 		font-size: 25px;
 		letter-spacing: -0.6px;
 	}
+	.trend-main-heading > div:first-child {
+		flex: 1;
+		min-width: 0;
+	}
+	.property-description {
+		display: grid;
+	}
 	.trend-main-heading p {
 		color: var(--muted);
 		font-size: 13px;
 		line-height: 1.8;
 		max-width: 60ch;
 		margin-top: 9px;
+		grid-area: 1 / 1;
+		visibility: hidden;
+	}
+	.trend-main-heading p.current {
+		visibility: visible;
 	}
 	.view-switch {
 		display: flex;
@@ -569,6 +586,7 @@
 		width: 100%;
 		border-collapse: collapse;
 		font-size: 13px;
+		table-layout: fixed;
 	}
 	th {
 		color: var(--muted);
@@ -590,6 +608,9 @@
 	}
 	th button span {
 		font-size: 14px;
+		width: 1em;
+		flex-shrink: 0;
+		text-align: center;
 	}
 	th:first-child {
 		width: 60px;
@@ -620,6 +641,11 @@
 		min-height: 44px;
 		border-radius: 4px;
 		font-size: 13px;
+		max-width: 100%;
+	}
+	.table-element > span:last-child {
+		min-width: 0;
+		overflow-wrap: anywhere;
 	}
 	.table-element:hover {
 		color: var(--accent);
@@ -632,12 +658,15 @@
 		border-radius: 5px;
 		font-family: var(--font-display);
 		font-size: 18px;
+		flex-shrink: 0;
 	}
 	.period-column {
+		width: 70px;
 		text-align: center;
 		color: var(--muted);
 	}
 	.value-column {
+		width: 140px;
 		text-align: right;
 	}
 	th.value-column button {
@@ -649,6 +678,7 @@
 	}
 	.no-results {
 		padding: 28px 0;
+		font-size: 13px;
 		color: var(--muted);
 		text-align: center;
 		line-height: 1.8;
@@ -880,7 +910,7 @@
 			padding: 7px 5px;
 		}
 		th:first-child {
-			width: 32px;
+			width: 44px;
 		}
 		.period-column {
 			display: none;
@@ -896,6 +926,7 @@
 		}
 		.value-column {
 			font-size: 12px;
+			width: 84px;
 		}
 	}
 	@media (prefers-reduced-motion: reduce) {

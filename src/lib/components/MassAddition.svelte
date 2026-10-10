@@ -87,6 +87,7 @@
 		border: 1px solid var(--border);
 		border-radius: var(--radius);
 		background: var(--surface);
+		overflow: hidden;
 	}
 	header {
 		display: flex;
@@ -118,6 +119,7 @@
 		color: var(--muted);
 		font-variant-numeric: tabular-nums;
 		scrollbar-color: var(--border) var(--surface);
+		scrollbar-gutter: stable;
 	}
 	.mass-term {
 		display: inline-block;
@@ -143,6 +145,7 @@
 		font-size: clamp(20px, 2vw, 28px);
 		line-height: 1.4;
 		scrollbar-color: var(--border) var(--surface);
+		scrollbar-gutter: stable;
 	}
 	.compound span {
 		white-space: nowrap;
@@ -197,18 +200,16 @@
 	}
 	@media (max-width: 1000px) {
 		.mass-addition {
-			height: auto;
-			min-height: 230px;
+			height: 100%;
 		}
 		.mass-equation {
-			flex: none;
-			max-height: 84px;
 			font-size: 16px;
 		}
 		.mass-result {
 			margin-top: auto;
 		}
 		.compound {
+			height: 2.8em;
 			max-height: 2.8em;
 		}
 	}
@@ -217,13 +218,21 @@
 			padding: 12px 14px;
 		}
 		.mass-result {
-			flex-wrap: wrap;
+			display: grid;
+			grid-template-columns: minmax(0, 1fr);
+			gap: 6px;
 		}
 		.total {
 			margin-left: auto;
 		}
 		footer {
-			flex-wrap: wrap;
+			display: grid;
+			grid-template-columns: minmax(0, 1fr) auto;
+			align-items: center;
+		}
+		footer p {
+			line-height: 1.5;
+			min-height: 3em;
 		}
 	}
 </style>

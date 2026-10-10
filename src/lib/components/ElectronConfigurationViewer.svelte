@@ -12,10 +12,12 @@
 	let {
 		element,
 		view = $bindable<ConfigurationView>('full'),
+		contained = false,
 		onviewchange
 	}: {
 		element: Element;
 		view?: ConfigurationView;
+		contained?: boolean;
 		onviewchange?: (view: ConfigurationView) => void;
 	} = $props();
 	const views: Array<{ id: ConfigurationView; label: string }> = [
@@ -66,6 +68,7 @@
 
 <div
 	class="configuration-viewer"
+	class:contained
 	style={`--configuration-color:var(--category-${element.category})`}
 >
 	<div class="viewer-toolbar">
@@ -89,7 +92,13 @@
 			{pending === context ? 'Copying…' : notice?.success ? 'Copied' : 'Copy'}
 		</button>
 	</div>
-	<div class="configuration-content">
+	<!-- svelte-ignore a11y_no_noninteractive_tabindex (The dialog's labeled configuration region supports keyboard scrolling.) -->
+	<div
+		class="configuration-content"
+		role={contained ? 'region' : undefined}
+		aria-label={contained ? 'Electron configuration details' : undefined}
+		tabindex={contained ? 0 : undefined}
+	>
 		<p class="view-label">
 			{activeView === 'short'
 				? 'Short electron configuration'
@@ -165,6 +174,25 @@
 	.configuration-viewer {
 		min-width: 0;
 	}
+	.configuration-viewer.contained {
+		display: flex;
+		flex-direction: column;
+		flex: 1;
+		min-height: 0;
+	}
+	.contained .configuration-content {
+		flex: 1;
+		min-height: 0;
+		overflow-y: auto;
+		scrollbar-gutter: stable;
+		overscroll-behavior: contain;
+	}
+	.contained .viewer-toolbar,
+	.contained .configuration-summary,
+	.contained .reference-note,
+	.contained .copy-feedback {
+		flex-shrink: 0;
+	}
 	.viewer-toolbar {
 		display: flex;
 		align-items: center;
@@ -202,6 +230,8 @@
 		font-size: 13px;
 		padding: 8px 12px;
 		background: transparent;
+		width: 112px;
+		flex: 0 0 112px;
 	}
 	.configuration-content {
 		padding: 20px;
@@ -280,7 +310,8 @@
 		font-variant-numeric: tabular-nums;
 	}
 	.copy-feedback {
-		min-height: 1.7em;
+		min-height: calc(3em + 8px);
+		line-height: 1.5;
 		padding-top: 8px;
 		font-size: 12px;
 		color: var(--muted);
@@ -290,6 +321,23 @@
 		color: var(--muted);
 		font-size: 12px;
 		line-height: 1.7;
+	}
+	@media (max-height: 600px) {
+		.configuration-viewer.contained {
+			overflow-y: auto;
+			scrollbar-gutter: stable;
+		}
+		.contained .viewer-toolbar {
+			position: sticky;
+			top: 0;
+			z-index: 1;
+			background: var(--surface);
+		}
+		.contained .configuration-content {
+			flex: none;
+			overflow: visible;
+			scrollbar-gutter: auto;
+		}
 	}
 	@media (max-width: 600px) {
 		.configuration-content {

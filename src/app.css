@@ -116,6 +116,26 @@ body {
 	line-height: 1.5;
 	-webkit-font-smoothing: antialiased;
 }
+#initial-view-loading {
+	display: none;
+	position: fixed;
+	top: clamp(160px, 30vh, 240px);
+	left: 0;
+	right: 0;
+	padding: 24px;
+	text-align: center;
+	font-size: 14px;
+	color: var(--muted);
+}
+html[data-initial-view='pending'] main,
+html[data-initial-view='pending'] main *,
+html[data-initial-view='pending'] .site-footer,
+html[data-initial-view='pending'] .site-footer * {
+	visibility: hidden !important;
+}
+html[data-initial-view='pending'] #initial-view-loading {
+	display: block;
+}
 button,
 input,
 select,

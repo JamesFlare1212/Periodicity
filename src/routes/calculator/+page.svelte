@@ -14,7 +14,7 @@
 	let result = $state<MolarMassResult | null>(calculateMolarMass('H2O'));
 	let error = $state('');
 	let notice = $state('');
-	let lastUrlFormula = '';
+	let lastUrlFormula: string | undefined;
 	let formulaInput: HTMLInputElement;
 	const massFormat = new Intl.NumberFormat('en-US', {
 		minimumFractionDigits: 3,
@@ -200,9 +200,7 @@
 			<div class="composition-heading">
 				<h2 id="composition-heading">Elemental composition</h2>
 				<p class="text-muted">
-					{isChanged
-						? `Showing the calculation for ${result.formula}`
-						: 'Every element, accounted for.'}
+					Composition of {result.formula}
 				</p>
 			</div>
 			<div class="composition-panel panel">
@@ -471,6 +469,8 @@
 		padding: 5px 9px;
 		border-radius: 20px;
 		font-size: 11px;
+		min-width: 116px;
+		justify-content: center;
 	}
 	.result-formula {
 		color: var(--accent);
@@ -522,6 +522,7 @@
 		color: var(--muted);
 		font-size: 12px;
 		line-height: 1.6;
+		min-height: 3.2em;
 	}
 	.changed-note {
 		color: var(--accent);
@@ -564,6 +565,8 @@
 	.composition-heading p {
 		font-size: 14px;
 		margin: 0;
+		min-height: 1.6em;
+		line-height: 1.6;
 	}
 	.composition-panel {
 		overflow: hidden;

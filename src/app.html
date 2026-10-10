@@ -10,10 +10,34 @@
 				const theme = localStorage.getItem('periodicity-theme');
 				if (theme === 'light' || theme === 'dark') document.documentElement.dataset.theme = theme;
 			} catch {}
+			// Prerendered HTML has the default view. Keep query-specific content
+			// out of the first paint until Svelte has applied the requested state.
+			const path = location.pathname.replace(/\/$/, '') || '/';
+			const defaults =
+				path === '/'
+					? { element: '', display: 'families', temperature: '298', family: '' }
+					: path === '/trends'
+						? { property: 'ionizationEnergy', view: 'chart', period: 'all' }
+						: path === '/compare'
+							? { elements: '6,14' }
+							: path === '/calculator'
+								? { formula: 'H2O' }
+								: /^\/element\/\d+$/.test(path)
+									? { configuration: 'full' }
+									: {};
+			const parameters = new URLSearchParams(location.search);
+			if (
+				Object.entries(defaults).some(([key, value]) =>
+					parameters.getAll(key).some((requested) => requested !== value)
+				)
+			) {
+				document.documentElement.dataset.initialView = 'pending';
+			}
 		</script>
 		%sveltekit.head%
 	</head>
 	<body data-sveltekit-preload-data="hover">
+		<p id="initial-view-loading" role="status">Loading your view…</p>
 		<div style="display: contents">%sveltekit.body%</div>
 	</body>
 </html>

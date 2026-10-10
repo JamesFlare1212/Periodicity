@@ -412,6 +412,7 @@
 		font-family: var(--font-display);
 		font-size: 20px;
 		font-weight: 500;
+		line-height: 1;
 		color: var(--element-color);
 	}
 	.selected-element :global(svg) {
@@ -464,7 +465,7 @@
 	.empty-selection {
 		color: var(--muted);
 		font-size: 14px;
-		line-height: 1.6;
+		line-height: 1.5;
 	}
 	.property-comparison {
 		margin-top: 36px;

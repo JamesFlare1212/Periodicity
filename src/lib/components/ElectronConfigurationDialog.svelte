@@ -11,7 +11,7 @@
 	function trapFocus(event: KeyboardEvent) {
 		if (event.key !== 'Tab') return;
 		const controls = Array.from(
-			dialog.querySelectorAll<HTMLElement>('button:not(:disabled), a[href]')
+			dialog.querySelectorAll<HTMLElement>('button:not(:disabled), a[href], [tabindex="0"]')
 		);
 		const first = controls[0];
 		const last = controls.at(-1);
@@ -50,6 +50,7 @@
 
 <dialog
 	bind:this={dialog}
+	style={`--shell-count:${Math.max(1, element.shells?.length ?? 0)}`}
 	aria-labelledby={titleId}
 	oncancel={(event) => {
 		event.preventDefault();
@@ -71,7 +72,7 @@
 			><Icon name="close" size={16} />Close</button
 		>
 	</div>
-	<ElectronConfigurationViewer {element} />
+	<ElectronConfigurationViewer {element} contained />
 	<a
 		class="element-link"
 		href={`/element/${element.number}/?configuration=full#electronic-heading`}
@@ -83,19 +84,25 @@
 <style>
 	dialog {
 		width: min(640px, calc(100% - 32px));
+		height: min(680px, 85dvh, calc(432px + 64px * var(--shell-count)));
 		max-height: 85dvh;
 		padding: 28px;
-		overflow-y: auto;
+		overflow: hidden;
 		overscroll-behavior: contain;
 		border: 1px solid var(--border);
 		border-radius: 14px;
 		background: var(--surface);
 		color: var(--text);
 	}
+	dialog[open] {
+		display: flex;
+		flex-direction: column;
+	}
 	dialog::backdrop {
 		background: rgb(0 0 0 / 65%);
 	}
 	.dialog-header {
+		flex-shrink: 0;
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
@@ -117,6 +124,8 @@
 		font-size: 13px;
 	}
 	.element-link {
+		flex-shrink: 0;
+		align-self: flex-start;
 		display: inline-flex;
 		align-items: center;
 		gap: 8px;
