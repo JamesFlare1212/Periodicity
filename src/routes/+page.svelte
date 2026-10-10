@@ -21,7 +21,7 @@
 	import Icon from '#lib/components/Icon.svelte';
 	import { calculateElementSelection } from '#lib/chemistry/element-selection.js';
 
-	let category = $state<CategoryId | ''>('');
+	let selectedFamilies = $state<CategoryId[]>([]);
 	let display = $state<'families' | 'phase' | TrendId>('families');
 	let temperature = $state(298);
 	let selected = $state<Element | null>(null);
@@ -39,7 +39,11 @@
 	);
 	let effectiveUrl = $derived(page.shallow?.url ?? page.url);
 	let preview = $derived(selected ?? hovered ?? getElement(6)!);
-	let matches = $derived(elements.filter((element) => !category || element.category === category));
+	let matches = $derived(
+		elements.filter(
+			(element) => selectedFamilies.length === 0 || selectedFamilies.includes(element.category)
+		)
+	);
 	let matchedNumbers = $derived(new Set(matches.map((element) => element.number)));
 	let phaseCounts = $derived(
 		elements.reduce(
@@ -56,8 +60,10 @@
 	$effect(() => {
 		if (!browser) return;
 		const params = effectiveUrl.searchParams;
-		const c = params.get('family');
-		category = categories.some((item) => item.id === c) ? (c as CategoryId) : '';
+		const families = params.getAll('family').flatMap((value) => value.split(','));
+		selectedFamilies = categories
+			.filter((family) => families.includes(family.id))
+			.map((family) => family.id);
 		const d = params.get('display');
 		display =
 			d === 'phase' || trendDefinitions.some((item) => item.id === d)
@@ -89,8 +95,10 @@
 		update({ element: String(element.number) });
 	}
 	function filterFamily(id: CategoryId) {
-		category = category === id ? '' : id;
-		update({ family: category || null });
+		selectedFamilies = selectedFamilies.includes(id)
+			? selectedFamilies.filter((family) => family !== id)
+			: [...selectedFamilies, id];
+		update({ family: selectedFamilies.join(',') || null });
 	}
 	function addToMass(element: Element, trigger: HTMLButtonElement) {
 		massSelection = [...massSelection, element];
@@ -111,7 +119,7 @@
 		massSelection = massSelection.slice(0, -1);
 	}
 	function reset() {
-		category = '';
+		selectedFamilies = [];
 		update({ family: null });
 	}
 	function changeDisplay(value: typeof display) {
@@ -246,13 +254,18 @@
 	<div class="mobile-family-filter">
 		<label for="mobile-family">Family</label><select
 			id="mobile-family"
-			value={category}
+			value="summary"
 			onchange={(event) => {
-				category = event.currentTarget.value as CategoryId | '';
-				update({ family: category || null });
+				if (event.currentTarget.value) filterFamily(event.currentTarget.value as CategoryId);
+				else reset();
+				event.currentTarget.value = 'summary';
 			}}
-			><option value="">All element families</option>{#each categories as family}<option
-					value={family.id}>{family.label}</option
+			><option value="summary" disabled
+				>{selectedFamilies.length === 0
+					? 'All element families'
+					: `${selectedFamilies.length} ${selectedFamilies.length === 1 ? 'family' : 'families'} selected`}</option
+			><option value="">Reset filters</option>{#each categories as family}<option value={family.id}
+					>{selectedFamilies.includes(family.id) ? '✓ ' : ''}{family.label}</option
 				>{/each}</select
 		>
 	</div>
@@ -273,23 +286,18 @@
 			/>
 		{/if}
 	</div>
-	{#if category || (isTrend && trend)}
-		<div class="table-caption" class:trend-only={!category}>
-			<span
-				>{#if category}<b>{matches.length}</b> of 118 elements in {categories
-						.find((item) => item.id === category)
-						?.label.toLowerCase()}{/if}</span
-			><span class="table-caption-right" class:affinity={display === 'electronAffinity'}
-				>{#if isTrend && trend}{trend.label}
-					<span
-						class="heatmap-key"
-						style={`--heatmap-color:${display === 'electronAffinity' ? trend.color : 'var(--accent)'}`}
-					>
-						{#if display === 'electronAffinity'}0{/if}<i aria-hidden="true"></i>
-						{display === 'electronAffinity' ? 'More energy released' : 'Low to high'}
-					</span>
-				{/if}</span
-			>
+	{#if isTrend && trend}
+		<div class="table-caption">
+			<span class="table-caption-right" class:affinity={display === 'electronAffinity'}
+				>{trend.label}
+				<span
+					class="heatmap-key"
+					style={`--heatmap-color:${display === 'electronAffinity' ? trend.color : 'var(--accent)'}`}
+				>
+					{#if display === 'electronAffinity'}0{/if}<i aria-hidden="true"></i>
+					{display === 'electronAffinity' ? 'More energy released' : 'Low to high'}
+				</span>
+			</span>
 		</div>
 	{/if}
 	<!-- svelte-ignore a11y_no_noninteractive_tabindex (The labeled table scroll region supports keyboard scrolling.) -->
@@ -357,12 +365,14 @@
 				class="f-block-placeholder lanthanides"
 				onclick={() => filterFamily('lanthanide')}
 				aria-label="Filter lanthanides, elements 57 to 71"
+				aria-pressed={selectedFamilies.includes('lanthanide')}
 				><span>57–71</span><Icon name="chevron-down" size={16} /></button
 			>
 			<button
 				class="f-block-placeholder actinides"
 				onclick={() => filterFamily('actinide')}
 				aria-label="Filter actinides, elements 89 to 103"
+				aria-pressed={selectedFamilies.includes('actinide')}
 				><span>89–103</span><Icon name="chevron-down" size={16} /></button
 			>
 			<span class="f-block-label lanthanide-label">Lanthanides</span><span
@@ -384,18 +394,20 @@
 	</div>
 	<div class="legend-wrap">
 		<div class="legend-heading">
-			<span>Element families</span>{#if category}<button class="reset-filter" onclick={reset}
-					><Icon name="reset" size={13} />Reset filters</button
-				>{:else}<span class="legend-tip">Select a family to highlight it</span>{/if}
+			<span>Element families</span>{#if selectedFamilies.length > 0}<button
+					class="reset-filter"
+					onclick={reset}><Icon name="reset" size={13} />Reset filters</button
+				>{:else}<span class="legend-tip">Select families to highlight; click again to deselect</span
+				>{/if}
 		</div>
 		<div class="family-legend" aria-label="Filter by element family">
 			{#each categories as family}<button
-					class:active={category === family.id}
-					class:muted={category !== '' && category !== family.id}
+					class:active={selectedFamilies.includes(family.id)}
+					class:muted={selectedFamilies.length > 0 && !selectedFamilies.includes(family.id)}
 					style={`--family-color:${family.color}`}
-					aria-pressed={category === family.id}
+					aria-pressed={selectedFamilies.includes(family.id)}
 					onclick={() => filterFamily(family.id)}
-					><i></i>{family.label}{#if category === family.id}<Icon
+					><i></i>{family.label}{#if selectedFamilies.includes(family.id)}<Icon
 							name="check"
 							size={13}
 						/>{/if}</button
@@ -584,7 +596,7 @@
 	.table-caption {
 		display: flex;
 		flex-wrap: wrap;
-		justify-content: space-between;
+		justify-content: flex-end;
 		gap: 16px;
 		margin: 16px 0 8px;
 		color: var(--muted);
@@ -595,10 +607,6 @@
 	}
 	.table-caption + .table-scroll {
 		margin-top: 0;
-	}
-	.table-caption b {
-		color: var(--text);
-		font-weight: 500;
 	}
 	.table-caption-right {
 		display: flex;
@@ -930,12 +938,9 @@
 			display: none;
 		}
 		.table-caption {
-			font-size: 11px;
-		}
-		.table-caption.trend-only {
 			display: none;
 		}
-		.table-caption.trend-only + .table-scroll {
+		.table-caption + .table-scroll {
 			margin-top: 16px;
 		}
 		.table-caption-right,
