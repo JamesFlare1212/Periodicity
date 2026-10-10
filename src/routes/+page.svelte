@@ -21,9 +21,11 @@
 	import Icon from '#lib/components/Icon.svelte';
 	import { calculateElementSelection } from '#lib/chemistry/element-selection.js';
 
+	const DEFAULT_TEMPERATURE = 298;
+
 	let selectedFamilies = $state<CategoryId[]>([]);
 	let display = $state<'families' | 'phase' | TrendId>('families');
-	let temperature = $state(298);
+	let temperature = $state(DEFAULT_TEMPERATURE);
 	let selected = $state<Element | null>(null);
 	let hovered = $state<Element | null>(null);
 	let configurationElement = $state<Element | null>(null);
@@ -69,8 +71,8 @@
 			d === 'phase' || trendDefinitions.some((item) => item.id === d)
 				? (d as typeof display)
 				: 'families';
-		const t = Number(params.get('temperature') ?? 298);
-		temperature = Number.isFinite(t) ? Math.min(6000, Math.max(0, t)) : 298;
+		const t = Number(params.get('temperature') ?? DEFAULT_TEMPERATURE);
+		temperature = Number.isFinite(t) ? Math.min(6000, Math.max(0, t)) : DEFAULT_TEMPERATURE;
 		selected = getElement(params.get('element') ?? '') ?? null;
 	});
 	function update(params: Record<string, string | null>) {
@@ -238,13 +240,22 @@
 						type="number"
 						min="0"
 						max="6000"
+						step="1"
 						value={temperature}
-						onchange={(event) => {
+						oninput={(event) => {
 							event.currentTarget.value = String(changeTemperature(event.currentTarget.value));
 						}}
 					/>
 					<span aria-hidden="true">K</span>
 				</div>
+				<button
+					type="button"
+					class="icon-button temperature-reset"
+					aria-label={`Reset temperature to ${DEFAULT_TEMPERATURE} K`}
+					title={`Reset temperature to ${DEFAULT_TEMPERATURE} K`}
+					onclick={() => changeTemperature(String(DEFAULT_TEMPERATURE))}
+					><Icon name="reset" size={17} /></button
+				>
 			</div>
 			<div class="phase-counts">
 				{#each ['solid', 'liquid', 'gas', 'unknown'] as state}<span
@@ -526,6 +537,10 @@
 		position: relative;
 		flex-shrink: 0;
 	}
+	.temperature-reset {
+		flex-shrink: 0;
+		color: var(--text);
+	}
 	.temperature-value span {
 		position: absolute;
 		right: 10px;
@@ -546,16 +561,15 @@
 		border: 0;
 	}
 	.temperature-control input[type='number'] {
-		width: 76px;
+		width: 100px;
 		padding-left: 8px;
 		padding-right: 28px;
 		font-size: 13px;
 		font-variant-numeric: tabular-nums;
-		appearance: textfield;
 	}
-	.temperature-control input[type='number']::-webkit-inner-spin-button,
-	.temperature-control input[type='number']::-webkit-outer-spin-button {
-		appearance: none;
+	.temperature-control input[type='number']::-webkit-inner-spin-button {
+		opacity: 1;
+		cursor: pointer;
 	}
 	.phase-counts {
 		display: flex;
@@ -1015,7 +1029,7 @@
 			gap: 8px;
 		}
 		.temperature-control input[type='number'] {
-			width: 84px;
+			width: 108px;
 			font-size: 16px;
 		}
 		.phase-counts {
