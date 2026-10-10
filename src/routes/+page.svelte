@@ -168,10 +168,10 @@
 <svelte:head><title>Periodicity — An atlas of the elements</title></svelte:head>
 <div class="page-shell explore-page">
 	<p class="sr-only" role="status">{massAnnouncement}</p>
-	<div class="explore-heading">
+	<div class="page-intro">
 		<div>
 			<h1 class="page-heading">The periodic table.</h1>
-			<p>Meet the elements that make everything.</p>
+			<p class="page-description">Meet the elements that make everything.</p>
 		</div>
 		<div class="heading-note">
 			<span class="live-dot"></span><span>118 elements. Endless discoveries.</span>
@@ -438,23 +438,7 @@
 <style>
 	.explore-page {
 		--mass-preview-height: 240px;
-		padding-top: 34px;
 		padding-bottom: 30px;
-	}
-	.explore-heading {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		gap: 24px;
-		margin-bottom: 29px;
-	}
-	.explore-heading h1 {
-		font-size: clamp(30px, 3vw, 41px);
-	}
-	.explore-heading p {
-		margin-top: 8px;
-		font-size: 14px;
-		color: var(--muted);
 	}
 	.heading-note {
 		font-size: 12px;
@@ -858,9 +842,6 @@
 		}
 	}
 	@media (max-width: 1000px) {
-		.explore-heading {
-			margin-bottom: 22px;
-		}
 		.table-toolbar {
 			flex-direction: column;
 			align-items: stretch;

@@ -180,10 +180,10 @@
 </svelte:head>
 
 <div class="page-shell compare-page">
-	<header class="tool-header">
+	<header class="page-intro">
 		<div>
 			<h1 class="page-heading">Compare elements</h1>
-			<p class="text-muted">
+			<p class="page-description">
 				Pick up to four elements from the periodic table to compare their properties.
 			</p>
 		</div>
@@ -336,14 +336,6 @@
 <style>
 	.compare-page {
 		padding-bottom: 64px;
-	}
-	.tool-header {
-		margin-bottom: 32px;
-	}
-	.tool-header p {
-		margin-top: 10px;
-		font-size: 15px;
-		line-height: 1.6;
 	}
 	.selection-panel {
 		padding: 24px;

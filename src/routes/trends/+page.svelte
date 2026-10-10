@@ -128,10 +128,10 @@
 </svelte:head>
 
 <div class="page-shell trends-page">
-	<div class="trends-intro">
+	<div class="page-intro">
 		<div>
 			<h1 class="page-heading">Periodic trends</h1>
-			<p>See the patterns. Understand the elements.</p>
+			<p class="page-description">See the patterns. Understand the elements.</p>
 		</div>
 		<a class="table-return" href="/"><Icon name="table" size={18} /> Back to the table</a>
 	</div>
@@ -367,18 +367,6 @@
 </div>
 
 <style>
-	.trends-intro {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: 24px;
-		margin-bottom: 36px;
-	}
-	.trends-intro p {
-		color: var(--muted);
-		font-size: 15px;
-		margin-top: 10px;
-	}
 	.table-return {
 		display: inline-flex;
 		align-items: center;
@@ -828,15 +816,6 @@
 		}
 	}
 	@media (max-width: 600px) {
-		.trends-intro {
-			margin-bottom: 25px;
-			align-items: start;
-		}
-		.trends-intro p {
-			font-size: 14px;
-			max-width: 24ch;
-			line-height: 1.7;
-		}
 		.table-return {
 			display: none;
 		}

@@ -219,6 +219,19 @@ button {
 	font-size: clamp(30px, 3.1vw, 44px);
 	letter-spacing: -0.045em;
 }
+.page-intro {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 24px;
+	margin-bottom: 32px;
+}
+.page-description {
+	margin-top: 10px;
+	color: var(--muted);
+	font-size: 15px;
+	line-height: 1.6;
+}
 .text-muted {
 	color: var(--muted);
 }
@@ -302,6 +315,13 @@ button {
 @media (max-width: 600px) {
 	.page-shell {
 		padding: 28px 16px 36px;
+	}
+	.page-intro {
+		align-items: start;
+		margin-bottom: 24px;
+	}
+	.page-description {
+		font-size: 14px;
 	}
 }
 @media (prefers-reduced-motion: reduce) {
