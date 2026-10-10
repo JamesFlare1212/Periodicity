@@ -106,6 +106,8 @@
 html {
 	background: var(--bg);
 	scroll-padding-top: 100px;
+	/* Keep the page width stable when a modal locks scrolling. */
+	scrollbar-gutter: stable;
 }
 body {
 	margin: 0;
