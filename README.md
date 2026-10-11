@@ -2,7 +2,7 @@
 
 An interactive atlas of all 118 chemical elements, rebuilt with **Bun, SvelteKit 3, Svelte 5, and TypeScript**.
 
-![Periodicity in dark appearance](screenshots/periodicity-desktop.png)
+![Periodicity desktop periodic table in dark appearance](screenshots/periodicity-desktop.png)
 
 Explore the periodic table, follow six periodic trends, compare up to four elements, and calculate molecular mass from a chemical formula.
 
@@ -39,18 +39,90 @@ The Playwright suite starts a local preview server and covers URL initialization
 
 ## Explore
 
-- **Periodic table:** Highlight a family; inspect an element; switch between family colors, physical states, and property heatmaps.
-- **Full electron configuration:** Select “Full configuration” in an element preview to expand its noble-gas core without leaving the table. Switch between Short, Full, and By shell, and copy the current view as plain text. Close with Escape, the Close button, or the backdrop; keyboard focus returns to the entry button. The element page uses the same viewer, defaults to Full, and preserves the view when browsing neighboring elements. Share a view with `/element/26/?configuration=shell#electronic-heading`.
-- **Quick molar mass:** Right-click element tiles to add atoms, or focus a tile and press Shift+Enter. Repeated elements become formula subscripts; the table preview shows the individual atomic masses and total in g/mol. On touch screens, select an element and use “Add [symbol] to mass.” Undo removes the last atom; Close or Escape clears the calculation. Open “Full calculator” for the formula’s composition and mass percentages.
-- **Temperature:** Select “Physical state” in the left-hand “Color by” menu to show temperature controls and state counts. On desktop, the borderless controls retain their layout space when hidden, so switching modes does not move the table. Small windows collapse the hidden controls to keep the element grid close to the toolbar. Explore estimated states from 0–6,000 K; adjusting the temperature activates physical-state coloring. This is an educational approximation at ordinary pressure. Missing measurements remain unknown, and transitions that do not define a liquid interval are handled separately.
-- **Trends:** Switch between ionization energy, electronegativity, atomic radius, electron affinity, density, and melting point. Inspect exact values on an interactive chart or a sortable, searchable, paginated table. Missing data are represented by gaps, rather than zeroes.
-- **Element pages:** Read the original summaries, electron configurations, discovery information, and physical properties; inspect an illustrative shell model; and navigate to neighboring elements.
-- **Compare:** Click elements directly on the periodic table to compare up to four elements. Click a selected tile again or click its label to remove it, or clear the whole selection. Use arrow keys to move between tiles and Enter or Space to select. On small screens, switch between a grid and the horizontally scrollable full table. Compare atomic, physical, and chemical properties, including full electron configurations with differing orbital occupancies highlighted, and share selections through the URL.
-- **Molar mass:** Enter formulas such as `H2O`, `C6H12O6`, `Ca(OH)2`, `K4[Fe(CN)6]`, or `CuSO4·5H2O`. Nested parentheses and brackets, pasted subscripts, and middle-dot hydrates are supported. Results include each element's contribution and mass percentage.
+### Periodic table
+
+Explore all 118 elements, highlight one or more families, and select a tile to inspect its atomic mass, electron configuration, and physical state. Use **Color by** to switch between family colors, physical states, and property heatmaps; the example below maps electronegativity with fluorine selected.
+
+![Periodic table colored by electronegativity with fluorine selected](screenshots/periodicity-heatmap.png)
+
+### Full electron configuration
+
+Select **Full configuration** in an element preview to expand its noble-gas core without leaving the table. Switch between **Short**, **Full**, and **By shell**, or copy the current view as plain text; the screenshot shows iron’s electrons grouped by principal shell. Close with Escape, **Close**, or the backdrop to return focus to the entry button.
+
+The element page uses the same viewer, defaults to Full, and preserves the view when browsing neighboring elements. Share a shell view with `/element/26/?configuration=shell#electronic-heading`.
+
+![Iron electron configuration dialog in By shell view](screenshots/periodicity-configuration.png)
+
+### Quick molar mass
+
+Build a formula directly on the periodic table: right-click tiles or focus a tile and press Shift+Enter to add atoms. On touch screens, select an element and use **Add [symbol] to mass**. Repeated elements become subscripts, and the preview shows each atomic mass and the total; adding two hydrogen atoms and one oxygen atom gives `H2O`, at **18.015 g/mol**.
+
+**Undo** removes the last atom; **Close** or Escape clears the calculation. Open **Full calculator** to see the composition and mass percentages.
+
+![Quick molar mass preview calculating water from two hydrogen atoms and one oxygen atom](screenshots/periodicity-quick-mass.png)
+
+### Temperature and physical states
+
+Choose **Physical state** in the **Color by** menu, then adjust the slider or enter a temperature from **0–6,000 K**. The table updates its colors and solid, liquid, gas, and unknown counts; the example shows the estimated states at **1,000 K**.
+
+These states are educational approximations at ordinary pressure. Missing measurements remain unknown, and transitions without a liquid interval are handled separately. Desktop controls keep their layout space when hidden; small windows collapse it to keep the grid close to the toolbar.
+
+![Periodic table showing estimated physical states at 1000 kelvin](screenshots/periodicity-temperature.png)
+
+### Periodic trends
+
+Follow six properties: ionization energy, electronegativity, atomic radius, electron affinity, density, and melting point. Filter by period and inspect exact values on the interactive chart, or switch to **Data** for a sortable, searchable, paginated table. Missing measurements appear as gaps or unavailable values, rather than zeroes.
+
+![Ionization energy chart across all periods with an exact hydrogen value and recorded extremes](screenshots/periodicity-trends.png)
+
+<details>
+<summary>Data view: electronegativity in period 3</summary>
+
+![Electronegativity data table filtered to period 3 with sorting, search, and pagination controls](screenshots/periodicity-trends-data.png)
+
+</details>
+
+### Element pages
+
+Open an element’s page to read its original summary, discovery information, and physical properties. Inspect an illustrative electron-shell model, expand the electron configuration, and see the element’s position on a periodic trend chart. Neighbor links let you continue through the table; the example below explores iron.
+
+![Iron detail page with its summary, shell model, physical properties, full electron configuration, and trend chart](screenshots/periodicity-element.png)
+
+### Compare elements
+
+Select up to four elements directly on the comparison page’s periodic table, then inspect their atomic structure and physical and chemical properties side by side. Full electron configurations highlight orbitals whose occupancies differ; the example compares **carbon, silicon, germanium, and tin** from group 14.
+
+Click a selected tile again or its label to remove it, or use **Clear all** to start over. Arrow keys move between tiles, and Enter or Space selects them. Small screens offer a grid and a horizontally scrollable full table, and selections are saved in the page’s URL for sharing.
+
+![Side-by-side comparison of carbon, silicon, germanium, and tin with differing orbital occupancies highlighted](screenshots/periodicity-compare.png)
+
+### Molar mass calculator
+
+Enter a chemical formula to calculate its molar mass, atom counts, each element’s contribution, and mass percentages. Formulas such as `H2O`, `C6H12O6`, `Ca(OH)2`, and `K4[Fe(CN)6]` support nested parentheses and brackets, pasted subscripts, and middle-dot hydrates.
+
+The example calculates **copper sulfate pentahydrate**, `CuSO4·5H2O`, at **249.682 g/mol**, with a breakdown of all four elements. Use the built-in examples to try another formula, or share a calculated formula through the page’s URL.
+
+![Copper sulfate pentahydrate molar mass calculation with atom counts, elemental contributions, and mass percentages](screenshots/periodicity-calculator.png)
+
+### Mobile layout, appearance, and accessibility
 
 On small screens, the default element grid remains readable and element previews size to their content. The Table control shows the complete 18-group layout in a labeled scroll region. Selecting an element locks its preview; select it again to open its detail page. Family filtering remains available above the grid.
 
+<details>
+<summary>Mobile preview</summary>
+
+<img src="screenshots/periodicity-mobile.png" alt="Periodicity mobile element grid and carbon preview in dark appearance" width="390" />
+
+</details>
+
 Use arrow keys to move around the desktop periodic table or mobile grid, and Enter or Space to select. All controls have visible focus indicators. Both appearances are paired independently, respect reduced motion, and remember the selected appearance when browser storage is available.
+
+<details>
+<summary>Light appearance</summary>
+
+![Periodic table and carbon preview in light appearance](screenshots/periodicity-light.png)
+
+</details>
 
 ## Deployment
 
