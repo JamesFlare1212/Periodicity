@@ -9,7 +9,17 @@
 		%sveltekit.head%
 	</head>
 	<body data-sveltekit-preload-data="hover">
-		<p id="initial-view-loading" role="status">Loading your view…</p>
+		<div id="initial-view-loading">
+			<p id="initial-view-pending" role="status">Loading your view…</p>
+			<section id="initial-view-failed" role="alert" aria-labelledby="initial-view-error-heading">
+				<h1 id="initial-view-error-heading">Your view could not be loaded</h1>
+				<p>Check your connection and retry. Your link and requested view have been kept.</p>
+				<button type="button" class="button button-primary" data-retry-initial-view>
+					Retry loading
+				</button>
+				<a class="button" href="?" data-sveltekit-reload>Open default view</a>
+			</section>
+		</div>
 		<div style="display: contents">%sveltekit.body%</div>
 	</body>
 </html>

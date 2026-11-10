@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { onDestroy } from 'svelte';
 	import Atom from '#lib/components/Atom.svelte';
 	import ElectronConfigurationViewer from '#lib/components/ElectronConfigurationViewer.svelte';
 	import { type ConfigurationView } from '#lib/chemistry/electron-configuration.js';
@@ -11,6 +12,13 @@
 	import type { PageData } from './$types';
 	import { formatNumber } from '#lib/format.js';
 	import { VIEW_DEFAULTS, readElementView } from '#lib/view-state.js';
+	import { createViewLinkWriter } from '#lib/ui/view-link.js';
+	let linkNotice = $state('');
+	const writeViewLink = createViewLinkWriter(
+		(url) => goto(url, { shallow: true, replace: true, reset: false }),
+		(message) => (linkNotice = message)
+	);
+	onDestroy(writeViewLink.dispose);
 
 	let { data }: { data: PageData } = $props();
 	let element = $derived(data.element);
@@ -22,6 +30,7 @@
 	let configurationView = $state<ConfigurationView>(VIEW_DEFAULTS.element.configuration);
 	$effect(() => {
 		if (!browser) return;
+		linkNotice = '';
 		configurationView = readElementView(effectiveUrl.searchParams).configuration;
 	});
 
@@ -29,7 +38,7 @@
 		configurationView = view;
 		const url = new URL(effectiveUrl.href);
 		url.searchParams.set('configuration', view);
-		void goto(url, { shallow: true, replace: true, reset: false });
+		void writeViewLink(url);
 	}
 	function neighborHref(number: number) {
 		return `/element/${number}/${configurationView === 'full' ? '' : `?configuration=${configurationView}`}`;
@@ -62,6 +71,7 @@
 	class="page-shell element-page"
 	style={`--element-color: var(--category-${element.category}); --element-bg: var(--category-${element.category}-bg)`}
 >
+	<p class="text-muted" role="status" hidden={!linkNotice}>{linkNotice}</p>
 	<div class="element-toolbar">
 		<a class="back-link" href="/"><Icon name="arrow-left" size={18} /> Periodic table</a>
 		<div class="position-label">

@@ -2,7 +2,7 @@
 	import { browser } from '$app/env';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
-	import { tick } from 'svelte';
+	import { onDestroy, tick } from 'svelte';
 	import {
 		categories,
 		elements,
@@ -22,15 +22,25 @@
 	import LayoutSwitch from '#lib/components/LayoutSwitch.svelte';
 	import { VIEW_DEFAULTS, readExploreView } from '#lib/view-state.js';
 	import { calculateElementSelection } from '#lib/chemistry/element-selection.js';
+	import { createViewLinkWriter } from '#lib/ui/view-link.js';
+	import { restoreFocus } from '#lib/ui/focus.js';
 
 	const DEFAULT_TEMPERATURE = VIEW_DEFAULTS.explore.temperature;
+	let linkNotice = $state('');
+	const writeViewLink = createViewLinkWriter(
+		(url) => goto(url, { shallow: true, replace: true, reset: false }),
+		(message) => (linkNotice = message)
+	);
+	onDestroy(writeViewLink.dispose);
 
 	let selectedFamilies = $state<CategoryId[]>([...VIEW_DEFAULTS.explore.families]);
 	let display = $state<'families' | 'phase' | TrendId>(VIEW_DEFAULTS.explore.display);
 	let temperature = $state(DEFAULT_TEMPERATURE);
 	let selected = $state<Element | null>(getElement(VIEW_DEFAULTS.explore.element ?? '') ?? null);
 	let hovered = $state<Element | null>(null);
+	let focused = $state<Element | null>(null);
 	let configurationElement = $state<Element | null>(null);
+	let configurationTrigger = $state<HTMLButtonElement>();
 	let mobileView = $state<'grid' | 'table'>('grid');
 	let massSelection = $state<Element[]>([]);
 	let massAddButton: HTMLButtonElement;
@@ -42,7 +52,7 @@
 			: ''
 	);
 	let effectiveUrl = $derived(page.shallow?.url ?? page.url);
-	let preview = $derived(selected ?? hovered ?? getElement(6)!);
+	let preview = $derived(selected ?? hovered ?? focused ?? getElement(6)!);
 	let matches = $derived(
 		elements.filter(
 			(element) => selectedFamilies.length === 0 || selectedFamilies.includes(element.category)
@@ -64,16 +74,25 @@
 	$effect(() => {
 		if (!browser) return;
 		const view = readExploreView(effectiveUrl.searchParams);
+		linkNotice = '';
 		selectedFamilies = view.families;
 		display = view.display;
 		temperature = view.temperature;
 		selected = getElement(view.element ?? '') ?? null;
 	});
-	function update(params: Record<string, string | null>) {
+	function update() {
+		// Serialize the whole local view: goto resolves asynchronously, so a second
+		// event may run before effectiveUrl contains the previous event's patch.
+		const params = {
+			element: selected ? String(selected.number) : null,
+			family: selectedFamilies.join(',') || null,
+			display: display === 'families' ? null : display,
+			temperature: temperature === DEFAULT_TEMPERATURE ? null : String(temperature)
+		};
 		const url = new URL(effectiveUrl.href);
 		for (const [key, value] of Object.entries(params))
 			value ? url.searchParams.set(key, value) : url.searchParams.delete(key);
-		void goto(url, { shallow: true, replace: true, reset: false });
+		void writeViewLink(url);
 	}
 	function selectElement(element: Element) {
 		if (selected?.number === element.number) {
@@ -82,19 +101,20 @@
 		}
 		selected = element;
 		hovered = null;
-		update({ element: String(element.number) });
+		update();
 	}
-	function openConfiguration(element: Element) {
+	function openConfiguration(element: Element, trigger: HTMLButtonElement) {
 		selected = element;
 		hovered = null;
 		configurationElement = element;
-		update({ element: String(element.number) });
+		configurationTrigger = trigger;
+		update();
 	}
 	function filterFamily(id: CategoryId) {
 		selectedFamilies = selectedFamilies.includes(id)
 			? selectedFamilies.filter((family) => family !== id)
 			: [...selectedFamilies, id];
-		update({ family: selectedFamilies.join(',') || null });
+		update();
 	}
 	function addToMass(element: Element, trigger: HTMLButtonElement) {
 		massSelection = [...massSelection, element];
@@ -103,9 +123,7 @@
 	async function closeMass() {
 		massSelection = [];
 		await tick();
-		const target =
-			massTrigger?.isConnected && massTrigger.getClientRects().length ? massTrigger : massAddButton;
-		target?.focus({ preventScroll: true });
+		restoreFocus(massTrigger, massAddButton);
 	}
 	function undoMass() {
 		if (massSelection.length === 1) {
@@ -116,21 +134,31 @@
 	}
 	function reset() {
 		selectedFamilies = [];
-		update({ family: null });
+		update();
 	}
 	function changeDisplay(value: typeof display) {
 		display = value;
-		update({ display: value === 'families' ? null : value });
+		update();
 	}
 	function changeTemperature(value: string) {
 		temperature = Math.min(6000, Math.max(0, Number(value) || 0));
 		display = 'phase';
-		update({ temperature: String(temperature), display: 'phase' });
+		update();
 		return temperature;
 	}
 </script>
 
 <svelte:window
+	onfocusout={(event) => {
+		const next = event.relatedTarget;
+		// Keep the keyboard preview while its actions receive focus. Otherwise a
+		// pointer click on “Add H” could blur H and calculate carbon before click.
+		if (!(
+			next instanceof HTMLElement &&
+			next.closest('[data-element], .preview-actions, .quick-mass-add')
+		))
+			focused = null;
+	}}
 	onkeydown={(event) => {
 		if (configurationElement) return;
 		if (!event.defaultPrevented && event.key === 'Escape' && massSelection.length > 0) {
@@ -142,6 +170,7 @@
 <svelte:head><title>Periodicity — An atlas of the elements</title></svelte:head>
 <div class="page-shell explore-page">
 	<p class="sr-only" role="status">{massAnnouncement}</p>
+	<p class="text-muted" role="status" hidden={!linkNotice}>{linkNotice}</p>
 	<div class="page-intro">
 		<div>
 			<h1 class="page-heading">The periodic table.</h1>
@@ -296,13 +325,11 @@
 					{temperature}
 					onselect={selectElement}
 					onadd={addToMass}
-					onpreview={(element) => (hovered = element)}
+					onpreview={(element, source) => {
+						if (source === 'pointer') hovered = element;
+						else focused = element;
+					}}
 					onleave={() => {
-						if (
-							document.activeElement instanceof HTMLElement &&
-							document.activeElement.dataset.element === String(element.number)
-						)
-							return;
 						if (hovered?.number === element.number) hovered = null;
 					}}
 				/>
@@ -345,6 +372,7 @@
 {#if configurationElement}
 	<ElectronConfigurationDialog
 		element={configurationElement}
+		trigger={configurationTrigger}
 		onclose={() => (configurationElement = null)}
 	/>
 {/if}

@@ -127,14 +127,32 @@ body {
 	font-size: 14px;
 	color: var(--muted);
 }
-html[data-initial-view='pending'] main,
-html[data-initial-view='pending'] main *,
-html[data-initial-view='pending'] .site-footer,
-html[data-initial-view='pending'] .site-footer * {
+html[data-initial-view] main,
+html[data-initial-view] main *,
+html[data-initial-view] .site-footer,
+html[data-initial-view] .site-footer * {
 	visibility: hidden !important;
 }
-html[data-initial-view='pending'] #initial-view-loading {
+html[data-initial-view] #initial-view-loading {
 	display: block;
+}
+#initial-view-failed,
+html[data-initial-view='failed'] #initial-view-pending {
+	display: none;
+}
+html[data-initial-view='failed'] #initial-view-failed {
+	display: block;
+}
+#initial-view-failed h1 {
+	font-size: 24px;
+	color: var(--text);
+}
+#initial-view-failed p {
+	margin: 16px auto;
+	max-width: 48ch;
+}
+#initial-view-failed .button {
+	margin: 4px;
 }
 button,
 input,

@@ -23,6 +23,8 @@
 	}: Props = $props();
 	let clientWidth = $state(0);
 	let selectedNumber = $state<number | null>(null);
+	// Search results may be relevance-ranked; geometry and keyboard order may not be.
+	let chartItems = $derived([...items].sort((a, b) => a.number - b.number));
 	let definition = $derived(trendDefinitions.find((item) => item.id === trend)!);
 	let width = $derived(Math.max(290, clientWidth || 840));
 	let height = $derived(compact ? 248 : 330);
@@ -30,14 +32,14 @@
 	const right = 15;
 	const top = 18;
 	const bottom = 38;
-	let firstNumber = $derived(items[0]?.number ?? 1);
-	let lastNumber = $derived(items.at(-1)?.number ?? 118);
+	let firstNumber = $derived(chartItems[0]?.number ?? 1);
+	let lastNumber = $derived(chartItems.at(-1)?.number ?? 118);
 	let selectedElement = $derived(
-		items.find((item) => item.number === (selectedNumber ?? active)) ?? items[0] ?? elements[0]
+		chartItems.find((item) => item.number === (selectedNumber ?? active)) ?? chartItems[0] ?? null
 	);
-	let selectedValue = $derived(getTrendValue(selectedElement, trend));
+	let selectedValue = $derived(selectedElement ? getTrendValue(selectedElement, trend) : null);
 	let values = $derived(
-		items
+		chartItems
 			.map((element) => getTrendValue(element, trend))
 			.filter((value): value is number => value !== null)
 	);
@@ -58,7 +60,7 @@
 	let path = $derived.by(() => {
 		let result = '';
 		let previousNumber: number | null = null;
-		for (const element of items) {
+		for (const element of chartItems) {
 			const value = getTrendValue(element, trend);
 			if (value === null) {
 				previousNumber = null;
@@ -74,6 +76,11 @@
 		active;
 		trend;
 		selectedNumber = null;
+	});
+
+	$effect(() => {
+		if (selectedNumber !== null && !chartItems.some((item) => item.number === selectedNumber))
+			selectedNumber = null;
 	});
 
 	function x(number: number) {
@@ -113,12 +120,12 @@
 		const pointerX = ((event.clientX - bounds.left) / bounds.width) * width;
 		const atomicNumber =
 			firstNumber + ((pointerX - left) / (width - left - right)) * (lastNumber - firstNumber);
-		const nearest = items.reduce(
+		const nearest = chartItems.reduce(
 			(best, element) =>
 				Math.abs(element.number - atomicNumber) < Math.abs(best.number - atomicNumber)
 					? element
 					: best,
-			items[0]
+			chartItems[0]
 		);
 		if (nearest) select(nearest.number);
 	}
@@ -128,16 +135,17 @@
 	}
 
 	function handleKey(event: KeyboardEvent) {
-		const index = items.findIndex((element) => element.number === selectedElement.number);
+		if (!selectedElement) return;
+		const index = chartItems.findIndex((element) => element.number === selectedElement.number);
 		let next = index;
 		if (event.key === 'ArrowRight' || event.key === 'ArrowUp')
-			next = Math.min(items.length - 1, index + 1);
+			next = Math.min(chartItems.length - 1, index + 1);
 		else if (event.key === 'ArrowLeft' || event.key === 'ArrowDown') next = Math.max(0, index - 1);
 		else if (event.key === 'Home') next = 0;
-		else if (event.key === 'End') next = items.length - 1;
+		else if (event.key === 'End') next = chartItems.length - 1;
 		else return;
 		event.preventDefault();
-		if (items[next]) select(items[next].number);
+		if (chartItems[next]) select(chartItems[next].number);
 	}
 </script>
 
@@ -147,101 +155,116 @@
 	bind:clientWidth
 	style={`--trend-color: ${definition.color}`}
 >
-	<div class="chart-readout" aria-live="polite" aria-atomic="true">
-		<a class="readout-element" href={`/element/${selectedElement.number}/`}>
-			<span class="readout-symbol">{selectedElement.symbol}</span>
-			<span
-				><strong>{selectedElement.name}</strong><small>Atomic number {selectedElement.number}</small
-				></span
-			>
-		</a>
-		<div class="readout-value">
-			<strong>{formatTrendValue(selectedElement, trend)}</strong><small
-				>{definition.unit || 'Pauling scale'}</small
-			>
+	{#if selectedElement}
+		<div class="chart-readout" aria-live="polite" aria-atomic="true">
+			<a class="readout-element" href={`/element/${selectedElement.number}/`}>
+				<span class="readout-symbol">{selectedElement.symbol}</span>
+				<span
+					><strong>{selectedElement.name}</strong><small
+						>Atomic number {selectedElement.number}</small
+					></span
+				>
+			</a>
+			<div class="readout-value">
+				<strong>{formatTrendValue(selectedElement, trend)}</strong><small
+					>{definition.unit || 'Pauling scale'}</small
+				>
+			</div>
 		</div>
-	</div>
 
-	<svg
-		viewBox={`0 0 ${width} ${height}`}
-		width="100%"
-		{height}
-		role="group"
-		aria-label={`${definition.label} by atomic number`}
-	>
-		<title>{definition.label} by atomic number</title>
-		<g aria-hidden="true">
-			{#each ticks as tick}
-				<line class="grid-line" x1={left} x2={width - right} y1={y(tick)} y2={y(tick)} />
-				<text class="axis-label" x={left - 10} y={y(tick) + 4} text-anchor="end"
-					>{tickLabel(tick)}</text
-				>
-			{/each}
-			{#each xTicks as tick}
-				<text
-					class="axis-label"
-					x={x(tick)}
-					y={height - 16}
-					text-anchor={tick === firstNumber ? 'start' : tick === lastNumber ? 'end' : 'middle'}
-					>{tick}</text
-				>
-			{/each}
-			<path class="trend-path" d={path} />
-			{#each items as element}
-				{@const value = getTrendValue(element, trend)}
-				{#if value !== null}
-					<circle class="data-point" cx={x(element.number)} cy={y(value)} r={compact ? 2 : 2.6} />
+		<svg
+			viewBox={`0 0 ${width} ${height}`}
+			width="100%"
+			{height}
+			role="group"
+			aria-label={`${definition.label} by atomic number`}
+		>
+			<title>{definition.label} by atomic number</title>
+			<g aria-hidden="true">
+				{#each ticks as tick}
+					<line class="grid-line" x1={left} x2={width - right} y1={y(tick)} y2={y(tick)} />
+					<text class="axis-label" x={left - 10} y={y(tick) + 4} text-anchor="end"
+						>{tickLabel(tick)}</text
+					>
+				{/each}
+				{#each xTicks as tick}
+					<text
+						class="axis-label"
+						x={x(tick)}
+						y={height - 16}
+						text-anchor={tick === firstNumber ? 'start' : tick === lastNumber ? 'end' : 'middle'}
+						>{tick}</text
+					>
+				{/each}
+				<path class="trend-path" d={path} />
+				{#each chartItems as element}
+					{@const value = getTrendValue(element, trend)}
+					{#if value !== null}
+						<circle class="data-point" cx={x(element.number)} cy={y(value)} r={compact ? 2 : 2.6} />
+					{/if}
+				{/each}
+				<line
+					class="selection-line"
+					x1={x(selectedElement.number)}
+					x2={x(selectedElement.number)}
+					y1={top}
+					y2={height - bottom}
+				/>
+				{#if selectedValue !== null}
+					<circle
+						class="selected-halo"
+						cx={x(selectedElement.number)}
+						cy={y(selectedValue)}
+						r="8"
+					/>
+					<circle
+						class="selected-point"
+						cx={x(selectedElement.number)}
+						cy={y(selectedValue)}
+						r="4"
+					/>
 				{/if}
-			{/each}
-			<line
-				class="selection-line"
-				x1={x(selectedElement.number)}
-				x2={x(selectedElement.number)}
-				y1={top}
-				y2={height - bottom}
+			</g>
+			<rect
+				class="chart-interaction"
+				x={left}
+				y={top}
+				width={width - left - right}
+				height={height - top - bottom}
+				fill="transparent"
+				tabindex="0"
+				role="slider"
+				aria-label="Explore elements by atomic number"
+				aria-valuemin={firstNumber}
+				aria-valuemax={lastNumber}
+				aria-valuenow={selectedElement.number}
+				aria-valuetext={`${selectedElement.name}, atomic number ${selectedElement.number}: ${formatTrendValue(selectedElement, trend)} ${selectedValue === null ? '' : definition.unit}`}
+				onpointermove={handlePointer}
+				onclick={selectFromPointer}
+				onkeydown={handleKey}
 			/>
-			{#if selectedValue !== null}
-				<circle class="selected-halo" cx={x(selectedElement.number)} cy={y(selectedValue)} r="8" />
-				<circle class="selected-point" cx={x(selectedElement.number)} cy={y(selectedValue)} r="4" />
-			{/if}
-		</g>
-		<rect
-			class="chart-interaction"
-			x={left}
-			y={top}
-			width={width - left - right}
-			height={height - top - bottom}
-			fill="transparent"
-			tabindex="0"
-			role="slider"
-			aria-label="Explore elements by atomic number"
-			aria-valuemin={firstNumber}
-			aria-valuemax={lastNumber}
-			aria-valuenow={selectedElement.number}
-			aria-valuetext={`${selectedElement.name}, atomic number ${selectedElement.number}: ${formatTrendValue(selectedElement, trend)} ${selectedValue === null ? '' : definition.unit}`}
-			onpointermove={handlePointer}
-			onclick={selectFromPointer}
-			onkeydown={handleKey}
-		/>
-	</svg>
+		</svg>
 
-	<div class="chart-caption">
-		<span>Atomic number</span><span>Gaps indicate unavailable data</span>
-	</div>
-	{#if !compact}
-		<div class="chart-access">
-			<label for={`chart-element-${trend}`}>Explore an element</label>
-			<select
-				id={`chart-element-${trend}`}
-				value={selectedElement.number}
-				onchange={(event) => select(Number(event.currentTarget.value))}
-			>
-				{#each items as element}<option value={element.number}
-						>{element.number}. {element.name} ({element.symbol})</option
-					>{/each}
-			</select>
-			<p>Use the arrow keys on the chart, or choose an element to see its exact value.</p>
+		<div class="chart-caption">
+			<span>Atomic number</span><span>Gaps indicate unavailable data</span>
 		</div>
+		{#if !compact}
+			<div class="chart-access">
+				<label for={`chart-element-${trend}`}>Explore an element</label>
+				<select
+					id={`chart-element-${trend}`}
+					value={selectedElement.number}
+					onchange={(event) => select(Number(event.currentTarget.value))}
+				>
+					{#each chartItems as element}<option value={element.number}
+							>{element.number}. {element.name} ({element.symbol})</option
+						>{/each}
+				</select>
+				<p>Use the arrow keys on the chart, or choose an element to see its exact value.</p>
+			</div>
+		{/if}
+	{:else}
+		<p class="chart-empty" role="status">No elements to display.</p>
 	{/if}
 </div>
 
@@ -249,6 +272,11 @@
 	.trend-chart {
 		min-width: 0;
 		width: 100%;
+	}
+	.chart-empty {
+		padding: 48px 16px;
+		text-align: center;
+		color: var(--muted);
 	}
 	.chart-readout {
 		display: flex;

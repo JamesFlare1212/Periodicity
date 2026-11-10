@@ -2,25 +2,42 @@ import { describe, expect, test } from 'bun:test';
 import { runInNewContext } from 'node:vm';
 import { renderAppTemplate } from '../../scripts/app-template.js';
 import { THEME_COLORS } from './theme.js';
+import { INITIAL_VIEW_READY_EVENT, INITIAL_VIEW_TIMEOUT_MS } from './initial-view.js';
 
 const html = await renderAppTemplate();
 const bootstrap = html.match(/<script>([\s\S]*?)<\/script>/)?.[1];
 if (!bootstrap) throw new Error('The initial view bootstrap is missing.');
 
-function initialView(path: string, getTheme = (): string | null => null) {
+function startup(path: string, getTheme = (): string | null => null) {
 	const dataset: Record<string, string> = { theme: 'dark' };
 	let themeColor = THEME_COLORS.dark;
+	const window = new EventTarget();
+	const timeouts = new Map<number, { callback: () => void; delay: number }>();
+	let timerId = 0;
 	runInNewContext(bootstrap!, {
 		location: new URL(path, 'https://periodicity.example'),
 		URL,
+		window,
+		HTMLElement: class {},
+		HTMLScriptElement: class {},
+		setTimeout: (callback: () => void, delay: number) => {
+			timeouts.set(++timerId, { callback, delay });
+			return timerId;
+		},
+		clearTimeout: (id: number) => timeouts.delete(id),
 		document: {
-			documentElement: { dataset },
+			documentElement: { dataset, removeAttribute: () => delete dataset.initialView },
 			querySelector: () => ({
 				setAttribute: (_name: string, value: string) => (themeColor = value)
 			})
 		},
 		localStorage: { getItem: getTheme }
 	});
+	return { dataset, themeColor, window, timeouts };
+}
+
+function initialView(path: string, getTheme = (): string | null => null) {
+	const { dataset, themeColor } = startup(path, getTheme);
 	return { dataset, themeColor };
 }
 
@@ -82,6 +99,31 @@ describe('prerendered query views', () => {
 			dataset: { theme: 'light', initialView: 'pending' },
 			themeColor: THEME_COLORS.light
 		});
+	});
+
+	test('a stalled view fails closed, and readiness clears the timer and error handlers', () => {
+		const boot = startup('/?element=8');
+		const timeout = [...boot.timeouts.values()][0];
+		expect(timeout.delay).toBe(INITIAL_VIEW_TIMEOUT_MS);
+		timeout.callback();
+		expect(boot.dataset.initialView).toBe('failed');
+		boot.window.dispatchEvent(new Event(INITIAL_VIEW_READY_EVENT));
+		expect(boot.dataset.initialView).toBeUndefined();
+		expect(boot.timeouts.size).toBe(0);
+		boot.window.dispatchEvent(new Event('error'));
+		boot.window.dispatchEvent(new Event('unhandledrejection'));
+		timeout.callback();
+		expect(boot.dataset.initialView).toBeUndefined();
+	});
+
+	test('module errors fail promptly without waiting for the timeout', () => {
+		const boot = startup('/?element=8');
+		boot.window.dispatchEvent(new Event('error'));
+		expect(boot.dataset.initialView).toBe('failed');
+	});
+
+	test('ordinary prerendered views do not install a startup timeout', () => {
+		expect(startup('/').timeouts.size).toBe(0);
 	});
 
 	test('startup code remains inline and excludes element records and chemistry', () => {

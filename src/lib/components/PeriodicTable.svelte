@@ -1,7 +1,8 @@
 <script lang="ts">
-	import type { Snippet } from 'svelte';
+	import { onMount, type Snippet } from 'svelte';
 	import { elements, type Element, type CategoryId } from '#lib/data/elements.js';
 	import { getElementNeighbor } from '#lib/ui/element-navigation.js';
+	import { isFocusAvailable, restoreFocus } from '#lib/ui/focus.js';
 	import Icon from './Icon.svelte';
 
 	let {
@@ -28,6 +29,34 @@
 		onfamily?: (category: CategoryId) => void;
 	} = $props();
 	let grid: HTMLDivElement;
+	let focusOwner: HTMLElement | null = null;
+	onMount(() => {
+		const observer = new ResizeObserver(() => {
+			if (!focusOwner || isFocusAvailable(focusOwner) || !document.hasFocus()) return;
+			const active = document.activeElement;
+			if (active !== document.body && active && !grid.contains(active)) {
+				focusOwner = null;
+				return;
+			}
+			const number = Number(focusOwner.dataset.element);
+			const available = Array.from(
+				grid.querySelectorAll<HTMLButtonElement>('button[data-element]')
+			).filter(isFocusAvailable);
+			const nearest = available.reduce<HTMLElement | null>(
+				(best, item) =>
+					!best ||
+					Math.abs(Number(item.dataset.element) - number) <
+						Math.abs(Number(best.dataset.element) - number)
+						? item
+						: best,
+				null
+			);
+			restoreFocus(nearest, grid.parentElement, { preventScroll: false });
+			if (!nearest) focusOwner = null;
+		});
+		observer.observe(grid);
+		return () => observer.disconnect();
+	});
 	const series: {
 		category: CategoryId;
 		label: string;
@@ -80,7 +109,20 @@
 		aria-label={label}
 		tabindex="0"
 	>
-		<div class="periodic-grid" bind:this={grid}>
+		<div
+			class="periodic-grid"
+			bind:this={grid}
+			onfocusin={(event) => {
+				const target = event.target;
+				focusOwner = target instanceof HTMLElement && target.dataset.element ? target : null;
+			}}
+			onfocusout={(event) => {
+				const next = event.relatedTarget;
+				if (next instanceof Node && grid.contains(next)) return;
+				// CSS can blur a hidden tile to body before ResizeObserver runs.
+				if (isFocusAvailable(focusOwner) || (next && next !== document.body)) focusOwner = null;
+			}}
+		>
 			{#each Array.from({ length: 18 }, (_, index) => index + 1) as group}
 				<span class="group-label" style:grid-column={group + 1} style:grid-row="1">{group}</span>
 			{/each}

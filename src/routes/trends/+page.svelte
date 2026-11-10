@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { untrack } from 'svelte';
+	import { onDestroy, untrack } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { browser } from '$app/env';
 	import { page } from '$app/state';
@@ -14,6 +14,13 @@
 	} from '#lib/data/elements.js';
 
 	import { VIEW_DEFAULTS, readTrendsView } from '#lib/view-state.js';
+	import { createViewLinkWriter } from '#lib/ui/view-link.js';
+	let linkNotice = $state('');
+	const writeViewLink = createViewLinkWriter(
+		(url) => goto(url, { shallow: true, replace: true }),
+		(message) => (linkNotice = message)
+	);
+	onDestroy(writeViewLink.dispose);
 	const pageSize = 24;
 	type SortKey = 'number' | 'name' | 'value';
 	let selectedTrend = $state<TrendId>(VIEW_DEFAULTS.trends.property);
@@ -26,7 +33,9 @@
 	let effectiveUrl = $derived(page.shallow?.url ?? page.url);
 	let definition = $derived(availableTrends.find((item) => item.id === selectedTrend)!);
 	let filteredElements = $derived(
-		searchElements(query).filter((element) => period === 'all' || element.period === Number(period))
+		searchElements(view === 'table' ? query : '').filter(
+			(element) => period === 'all' || element.period === Number(period)
+		)
 	);
 	let knownElements = $derived(
 		filteredElements.filter((element) => getTrendValue(element, selectedTrend) !== null)
@@ -61,9 +70,12 @@
 		const parameters = effectiveUrl.searchParams;
 		untrack(() => {
 			const requested = readTrendsView(parameters);
+			linkNotice = '';
 			selectedTrend = requested.property;
 			view = requested.view;
 			period = requested.period;
+			// URL-driven transitions must obey the same invariant as the Chart button.
+			if (view === 'chart') query = '';
 			pageIndex = 0;
 		});
 	});
@@ -76,7 +88,7 @@
 		else url.searchParams.delete('view');
 		if (period !== 'all') url.searchParams.set('period', period);
 		else url.searchParams.delete('period');
-		void goto(url, { shallow: true, replace: true });
+		void writeViewLink(url);
 	}
 
 	function selectTrend(trend: TrendId) {
@@ -119,6 +131,7 @@
 </svelte:head>
 
 <div class="page-shell trends-page">
+	<p class="text-muted" role="status" hidden={!linkNotice}>{linkNotice}</p>
 	<div class="page-intro">
 		<div>
 			<h1 class="page-heading">Periodic trends</h1>
