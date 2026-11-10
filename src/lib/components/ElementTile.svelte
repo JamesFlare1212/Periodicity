@@ -20,7 +20,7 @@
 		temperature?: number;
 		onselect: (element: Element) => void;
 		onadd?: (element: Element, trigger: HTMLButtonElement) => void;
-		onpreview: (element: Element) => void;
+		onpreview: (element: Element, source: 'pointer' | 'focus') => void;
 		onleave: () => void;
 	} = $props();
 	let presentation = $derived(getElementDisplay(element, display, temperature));
@@ -56,11 +56,10 @@
 		}
 	}}
 	onpointerenter={(event) => {
-		if (event.pointerType === 'mouse') onpreview(element);
+		if (event.pointerType === 'mouse') onpreview(element, 'pointer');
 	}}
 	onmouseleave={onleave}
 	onfocus={(event) => {
-		if (event.currentTarget.matches(':focus-visible')) onpreview(element);
+		if (event.currentTarget.matches(':focus-visible')) onpreview(element, 'focus');
 	}}
-	onblur={onleave}
 />

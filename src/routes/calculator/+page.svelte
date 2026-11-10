@@ -1,10 +1,11 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
-	import { tick, untrack } from 'svelte';
+	import { onDestroy, tick, untrack } from 'svelte';
 	import Icon from '#lib/components/Icon.svelte';
 	import FormulaDisplay from '#lib/components/FormulaDisplay.svelte';
 	import { VIEW_DEFAULTS, readCalculatorView } from '#lib/view-state.js';
+	import { createViewLinkWriter } from '#lib/ui/view-link.js';
 	import {
 		calculateMolarMass,
 		normalizeFormula,
@@ -15,6 +16,12 @@
 	let result = $state<MolarMassResult | null>(calculateMolarMass(VIEW_DEFAULTS.calculator.formula));
 	let error = $state('');
 	let notice = $state('');
+	let linkNotice = $state('');
+	const writeViewLink = createViewLinkWriter(
+		(url) => goto(url, { shallow: true, replace: true, reset: false }),
+		(message) => (linkNotice = message)
+	);
+	onDestroy(writeViewLink.dispose);
 	let lastUrlFormula: string | undefined;
 	let formulaInput: HTMLInputElement;
 	const massFormat = new Intl.NumberFormat('en-US', {
@@ -54,6 +61,7 @@
 
 	$effect(() => {
 		const fromUrl = readCalculatorView(effectiveUrl.searchParams).formula;
+		linkNotice = '';
 		if (fromUrl !== lastUrlFormula) {
 			lastUrlFormula = fromUrl;
 			untrack(() => {
@@ -65,18 +73,18 @@
 
 	async function calculate(event?: SubmitEvent) {
 		event?.preventDefault();
+		writeViewLink.invalidate();
+		const pathname = effectiveUrl.pathname;
+		const submittedFormula = formula;
 		if (!compute(formula)) {
 			await tick();
-			formulaInput?.focus();
+			if (effectiveUrl.pathname === pathname && formula === submittedFormula && error)
+				formulaInput?.focus();
 			return;
 		}
 		const url = new URL(effectiveUrl.href);
 		url.searchParams.set('formula', result!.formula);
-		try {
-			await goto(url, { shallow: true, replace: true, reset: false });
-		} catch {
-			// The calculation remains usable even if updating browser history fails.
-		}
+		await writeViewLink(url);
 	}
 
 	async function useExample(value: string) {
@@ -94,6 +102,7 @@
 </svelte:head>
 
 <div class="page-shell calculator-page">
+	<p class="text-muted" role="status" hidden={!linkNotice}>{linkNotice}</p>
 	<header class="tool-header">
 		<div>
 			<h1 class="page-heading">Molar mass calculator</h1>
@@ -120,6 +129,7 @@
 						type="text"
 						bind:this={formulaInput}
 						bind:value={formula}
+						oninput={() => writeViewLink.invalidate()}
 						aria-invalid={error ? 'true' : undefined}
 						aria-describedby={error ? 'formula-help formula-error' : 'formula-help'}
 						placeholder="e.g. Ca(OH)2"

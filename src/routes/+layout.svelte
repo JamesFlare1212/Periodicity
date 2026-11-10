@@ -1,17 +1,25 @@
 <script lang="ts">
 	import '../app.css';
 	import { page } from '$app/state';
+	import { beforeNavigate } from '$app/navigation';
 	import { onMount, tick } from 'svelte';
 	import Icon, { type IconName } from '#lib/components/Icon.svelte';
 	import { restoreTheme, saveTheme, type Theme } from '#lib/theme.js';
+	import { markAppReady } from '#lib/initial-view.js';
+	import { canApplyViewLink, invalidatePendingViewLinks } from '#lib/ui/view-link.js';
+	beforeNavigate((navigation) => {
+		if (navigation.type === 'goto' && navigation.shallow && navigation.to) {
+			if (!canApplyViewLink(navigation.to.url, navigation.from?.url ?? new URL(location.href)))
+				navigation.cancel();
+		} else {
+			invalidatePendingViewLinks();
+		}
+	});
 	let { children } = $props();
 	let theme = $state<Theme>('dark');
 	onMount(() => {
 		theme = restoreTheme();
-		void tick().then(() => {
-			document.documentElement.removeAttribute('data-initial-view');
-			document.documentElement.dataset.appReady = 'true';
-		});
+		void tick().then(markAppReady);
 	});
 	function toggleTheme() {
 		theme = theme === 'dark' ? 'light' : 'dark';

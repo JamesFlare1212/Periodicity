@@ -2,7 +2,7 @@
 	import { goto } from '$app/navigation';
 	import { browser } from '$app/env';
 	import { page } from '$app/state';
-	import { tick } from 'svelte';
+	import { onDestroy, tick } from 'svelte';
 	import ElectronConfiguration from '#lib/components/ElectronConfiguration.svelte';
 	import Icon from '#lib/components/Icon.svelte';
 	import PeriodicTablePicker from '#lib/components/PeriodicTablePicker.svelte';
@@ -14,12 +14,23 @@
 	import { getCategoryLabel, getElement, type Element } from '#lib/data/elements.js';
 	import { formatNumber } from '#lib/format.js';
 	import { readCompareView } from '#lib/view-state.js';
+	import { createViewLinkWriter } from '#lib/ui/view-link.js';
 
 	let pending = $state(false);
 	let notice = $state('');
 	let picker: PeriodicTablePicker;
+	const writeSelection = createViewLinkWriter(
+		(url) => goto(url, { shallow: true, replace: true, reset: false }),
+		(message) => (notice = message),
+		{ failureMessage: 'The comparison could not be updated. Try again.' }
+	);
+	onDestroy(writeSelection.dispose);
 
 	const effectiveUrl = $derived(page.shallow?.url ?? page.url);
+	$effect(() => {
+		effectiveUrl;
+		notice = '';
+	});
 	const selected = $derived(
 		readCompareView(browser ? effectiveUrl.searchParams : new URLSearchParams()).elements.map(
 			(number) => getElement(number)!
@@ -107,16 +118,15 @@
 		}
 	];
 
-	async function setSelection(next: Element[], message: string) {
-		if (pending) return;
+	async function setSelection(next: Element[], message: string): Promise<URL | null> {
+		if (pending) return null;
 		pending = true;
 		try {
 			const url = new URL(effectiveUrl.href);
 			url.searchParams.set('elements', next.map((element) => element.number).join(','));
-			await goto(url, { shallow: true, replace: true, reset: false });
+			if (!(await writeSelection(url))) return null;
 			notice = message;
-		} catch {
-			notice = 'The comparison could not be updated. Try again.';
+			return url;
 		} finally {
 			pending = false;
 		}
@@ -140,16 +150,24 @@
 	async function removeElement(element: Element) {
 		if (pending) return;
 		const next = selected.filter((chosen) => chosen.number !== element.number);
-		await setSelection(next, `Removed ${element.name}. ${next.length} elements selected.`);
+		const applied = await setSelection(
+			next,
+			`Removed ${element.name}. ${next.length} elements selected.`
+		);
+		if (!applied) return;
 		await tick();
-		picker?.focusElement(element.number);
+		if (effectiveUrl.href === applied.href) picker?.focusElement(element.number);
 	}
 
 	async function clearSelection() {
 		if (pending) return;
-		await setSelection([], 'Comparison cleared. Select elements from the periodic table.');
+		const applied = await setSelection(
+			[],
+			'Comparison cleared. Select elements from the periodic table.'
+		);
+		if (!applied) return;
 		await tick();
-		picker?.focusElement(1);
+		if (effectiveUrl.href === applied.href) picker?.focusElement(1);
 	}
 
 	function preset(identifiers: number[]) {

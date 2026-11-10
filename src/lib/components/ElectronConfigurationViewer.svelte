@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { onDestroy } from 'svelte';
 	import type { Element } from '#lib/data/elements.js';
 	import {
 		configurationText,
@@ -34,35 +35,45 @@
 	let pending = $state<string | null>(null);
 	let notice = $derived(feedback?.context === context ? feedback : null);
 	let copyRevision = 0;
-	$effect(() => {
-		context;
+	let lastCopyContext = '';
+	function syncCopyContext() {
+		if (lastCopyContext === context) return;
+		lastCopyContext = context;
 		copyRevision++;
 		feedback = null;
 		pending = null;
+	}
+	$effect(syncCopyContext);
+	onDestroy(() => {
+		copyRevision++;
 	});
 
 	function setView(next: ConfigurationView) {
 		view = next;
+		syncCopyContext();
 		feedback = null;
 		onviewchange?.(next);
 	}
 	async function copy() {
+		syncCopyContext();
+		if (!copyText || pending === context) return;
 		const requestedContext = context;
-		const revision = copyRevision;
+		const revision = ++copyRevision;
 		pending = requestedContext;
 		try {
 			await navigator.clipboard.writeText(copyText);
-			if (revision !== copyRevision) return;
+			if (revision !== copyRevision || requestedContext !== context) return;
 			feedback = { context: requestedContext, message: 'Configuration copied.', success: true };
 		} catch {
-			if (revision !== copyRevision) return;
+			if (revision !== copyRevision || requestedContext !== context) return;
 			feedback = {
 				context: requestedContext,
 				message: 'Copy unavailable. Select the configuration and copy it.',
 				success: false
 			};
 		} finally {
-			if (revision === copyRevision && pending === requestedContext) pending = null;
+			if (revision === copyRevision && requestedContext === context && pending === requestedContext)
+				pending = null;
 		}
 	}
 </script>

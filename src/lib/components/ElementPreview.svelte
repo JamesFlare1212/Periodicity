@@ -13,7 +13,7 @@
 		element: Element;
 		display?: ElementDisplay;
 		temperature?: number;
-		onconfiguration?: (element: Element) => void;
+		onconfiguration?: (element: Element, trigger: HTMLButtonElement) => void;
 	} = $props();
 	let category = $derived(categoryById[element.category]);
 	let phase = $derived(getPhaseAtTemperature(element, temperature));
@@ -64,7 +64,7 @@
 				<button
 					type="button"
 					class="configuration-link"
-					onclick={() => onconfiguration?.(element)}
+					onclick={(event) => onconfiguration?.(element, event.currentTarget)}
 					aria-haspopup="dialog">Full configuration</button
 				>
 			{/if}

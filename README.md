@@ -37,7 +37,11 @@ bun run build
 bun run test:e2e
 ```
 
-The Playwright suite starts a local preview server and covers URL initialization, consecutive updates, search aliases, comparison limits, focus restoration, mobile keyboard navigation, and saved appearance.
+The Playwright suite starts its own local preview server and covers startup failure/retry, URL initialization, batched updates, search aliases, comparison limits, mixed pointer/keyboard previews, responsive focus recovery, clipboard races, history failures, mobile keyboard navigation, and saved appearance. It will not silently reuse an occupied port; set `PERIODICITY_TEST_PORT` to choose another, or explicitly set `PERIODICITY_TEST_URL` to test a known existing build.
+
+Chromium is the default. With the required browser binaries and system libraries installed, set `PERIODICITY_TEST_BROWSERS=chromium,firefox,webkit` to exercise all three engines (POSIX shell syntax). See the developer guide below for commands and environment limitations.
+
+Shared links keep the requested view hidden until it is initialized. If scripts fail or initialization exceeds 15 seconds, **Retry loading** preserves the link; **Open default view** explicitly opens the prerendered default instead. Slow initialization can still finish after the recovery prompt appears.
 
 ## Explore
 
@@ -141,17 +145,20 @@ src/routes/                 Explorer, trends, comparison, calculator, and elemen
 src/lib/components/         Shared table layout, element buttons, viewers, and charts
 src/lib/data/               Generated runtime data, original records, metadata, and provenance
 src/lib/chemistry/          Formula and electron-configuration logic with unit tests
-src/lib/ui/                 Shared keyboard navigation and unit tests
+src/lib/ui/                 Keyboard navigation, view-link persistence, and unit tests
 src/lib/view-state.ts       Shared route defaults and URL parameter parsing
 scripts/                    Reference-data generation
 e2e/                        Playwright browser regressions
 src/app.css                 Paired theme tokens, fonts, and shared controls
 design-system/periodicity/  Design decisions and interaction principles
+help/                       Developer invariants, risk notes, and regression guidance
 ```
 
-Svelte 5 runes drive the interface. SvelteKit 3 uses package subpath imports (`#lib/*`) and its current configuration in `vite.config.ts`. Shared route parsers also drive the pre-hydration bootstrap. URL state uses the effective shallow-navigation URL so repeated interactions preserve selections, display modes, temperature, and filters.
+Svelte 5 runes drive the interface. SvelteKit 3 uses package subpath imports (`#lib/*`) and its current configuration in `vite.config.ts`. Shared route parsers also drive the pre-hydration bootstrap. URL state uses the effective shallow-navigation URL so repeated interactions preserve selections, display modes, temperature, and filters. Shallow writes are guarded by request ownership before history changes; canceled or stale requests cannot report a successful save or overwrite a newer view.
 
 The explorer and comparison picker share `PeriodicTable.svelte`, `ElementButton.svelte`, layout controls, and keyboard navigation. The explorer mounts one set of 118 tiles and one preview; CSS adapts that same tree for the desktop table, mobile grid, and mobile table. Bun unit tests live beside the modules they protect; browser tests live in `e2e/`.
+
+See the [developer state and regression guide](help/development-state-machines.md) for transition invariants, reproduced failure sequences, test coverage, and remaining risks. Keep it in sync when changing URL persistence, input priority, modal focus, or async feedback.
 
 ## Reference data
 

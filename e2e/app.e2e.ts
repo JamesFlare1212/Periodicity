@@ -11,11 +11,9 @@ test('query content stays hidden until the requested state has initialized', asy
 	await page.goto('/trends/?property=density&view=table&period=7', {
 		waitUntil: 'domcontentloaded'
 	});
-	await expect(page.locator('html')).toHaveAttribute('data-initial-view', 'pending');
+	await expect(page.locator('html')).toHaveAttribute('data-initial-view', 'failed');
 	await expect(page.locator('main')).toBeHidden();
-	await expect(
-		page.getByRole('status', { name: '' }).filter({ hasText: 'Loading your view' })
-	).toBeVisible();
+	await expect(page.getByRole('button', { name: 'Retry loading', exact: true })).toBeVisible();
 
 	await page.unroute('**/_app/**/*.js');
 	await page.reload();

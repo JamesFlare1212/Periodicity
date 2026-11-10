@@ -1,9 +1,14 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { restoreFocus } from '#lib/ui/focus.js';
 	import type { Element } from '#lib/data/elements.js';
 	import ElectronConfigurationViewer from './ElectronConfigurationViewer.svelte';
 	import Icon from './Icon.svelte';
-	let { element, onclose }: { element: Element; onclose: () => void } = $props();
+	let {
+		element,
+		trigger,
+		onclose
+	}: { element: Element; trigger?: HTMLButtonElement; onclose: () => void } = $props();
 	let dialog: HTMLDialogElement;
 	const titleId = $props.id();
 	let backdropPressed = false;
@@ -35,15 +40,21 @@
 		);
 	}
 	onMount(() => {
-		const trigger = document.activeElement;
+		const returnTarget = trigger ?? document.activeElement;
+		const pathname = location.pathname;
 		const overflow = document.body.style.overflow;
 		dialog.showModal();
 		document.body.style.overflow = 'hidden';
 		return () => {
 			if (dialog.open) dialog.close();
 			document.body.style.overflow = overflow;
-			if (trigger instanceof HTMLElement && trigger.isConnected)
-				trigger.focus({ preventScroll: true });
+			// A route change owns its own focus reset. On an ordinary close, use
+			// the explicit entry (not whichever node happened to have focus).
+			if (location.pathname !== pathname) return;
+			restoreFocus(
+				returnTarget instanceof HTMLElement ? returnTarget : null,
+				document.getElementById('main')
+			);
 		};
 	});
 </script>
@@ -58,9 +69,12 @@
 	}}
 	{onclose}
 	onkeydown={trapFocus}
-	onpointerdown={(event) => (backdropPressed = outside(event))}
+	onpointerdown={(event) => (backdropPressed = event.button === 0 && outside(event))}
+	onpointercancel={() => (backdropPressed = false)}
 	onclick={(event) => {
-		if (backdropPressed && outside(event)) onclose();
+		const close = backdropPressed && outside(event);
+		backdropPressed = false;
+		if (close) onclose();
 	}}
 >
 	<div class="dialog-header">

@@ -41,9 +41,12 @@ Mobile defaults to a readable element grid. An explicit Table control exposes th
 ## Interaction principles
 
 - A visible click or keyboard action selects an element; focus previews it without requiring hover.
-- Selected elements remain visible while pointer exploration updates a temporary preview.
+- A locked element takes precedence over temporary previews. Without a lock, pointer preview takes precedence over keyboard context, then the default carbon preview. Leaving a pointer target restores the keyboard context; moving focus to preview actions must not change the element being acted on.
 - URLs encode useful filters, trends, comparisons, and formulas for sharing and browser history.
 - Unknown properties remain unknown. Zero is a valid measurement.
 - Temperature states are educational approximations at ordinary pressure, with missing data and exceptions explicitly acknowledged.
-- Focus rings, native form controls, 44px controls, reduced motion, clear empty states, real source links, and both appearances are mandatory.
+- Focus rings, native form controls, 44px controls, reduced motion, clear empty states, real source links, and both appearances are mandatory. If resize hides a focused tile, move focus to the nearest visible element without stealing focus from controls outside the table.
+- A shared view that cannot initialize must offer an explicit retry or default-view action, never silently reveal default content that disagrees with the link.
 - No decorative gradients, motion loops, or repeated marketing cards. Color represents chemical families.
+
+Implementation invariants, reproduced edge cases, and regression coverage are documented in the [developer state guide](../../help/development-state-machines.md).
